@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 
 import { connectDB } from "@/lib/db";
 import { Member, Contribution } from "@/models";
+import type { IMember, IContribution } from "@/models";
 import MemberDetailClient from "@/features/members/MemberDetailClient";
 
 async function getMemberWithHistory(id: string) {
@@ -22,10 +23,9 @@ async function getMemberWithHistory(id: string) {
   const serializedMember = {
     ...member,
     _id: member._id.toString(),
-    applicationId: member.applicationId?.toString(),
-    memberId: member.memberId?.toString(),
-    approvedBy: member.approvedBy?.toString(),
-    dateOfBirth: member.dateOfBirth ? new Date(member.dateOfBirth).toISOString() : undefined,
+    applicationId: member.applicationId.toString(),
+    approvedBy: member.approvedBy.toString(),
+    dateOfBirth: new Date(member.dateOfBirth).toISOString(),
     joinedAt: member.joinedAt.toISOString(),
     suspendedAt: member.suspendedAt?.toISOString(),
     exitedAt: member.exitedAt?.toISOString(),
@@ -46,8 +46,8 @@ async function getMemberWithHistory(id: string) {
   }));
 
   return {
-    member: serializedMember as any,
-    contributions: serializedContributions as any[],
+    member: serializedMember as unknown as IMember,
+    contributions: serializedContributions as unknown as IContribution[],
   };
 }
 

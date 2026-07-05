@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-misused-promises */
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -23,7 +23,7 @@ type LoginFormData = z.infer<typeof LoginFormSchema>;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const from = searchParams.get("from") ?? "/dashboard";
@@ -148,5 +148,22 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-background flex items-center justify-center px-4">
+          <div className="w-full max-w-sm flex flex-col items-center justify-center">
+            <Loader2 className="size-8 text-primary animate-spin" />
+            <p className="text-sm text-muted-foreground mt-2">Loading sign in...</p>
+          </div>
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }
