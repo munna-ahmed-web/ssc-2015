@@ -1,0 +1,23 @@
+# Tasks — Gallery Images Feature
+
+- [ ] Database Layer
+  - [ ] Create `GalleryImage` Mongoose model at `src/models/GalleryImage.ts`
+  - [ ] Re-export model and interface in `src/models/index.ts`
+- [ ] Backend API routes
+  - [ ] Create public fetch route `app/api/gallery-images/route.ts`
+  - [ ] Create admin list and upload route `app/api/admin/gallery-images/route.ts`
+  - [ ] Create admin update and delete route `app/api/admin/gallery-images/[id]/route.ts`
+- [ ] Frontend Feature Layer (`src/features/gallery-images/`)
+  - [ ] Create types declaration at `src/features/gallery-images/types/types.ts`
+  - [ ] Create API client functions at `src/features/gallery-images/api/galleryImages.ts`
+  - [ ] Create query and mutation hooks at `src/features/gallery-images/hook/galleryImageHooks.ts`
+  - [ ] Create `GalleryImageCard.tsx` component
+  - [ ] Create `UploadGalleryImageModal.tsx` component
+  - [ ] Create `GalleryImageGrid.tsx` component
+- [ ] Admin Navigation & Page
+  - [ ] Add link to `src/components/layout/AdminSidebar.tsx`
+  - [ ] Create admin dashboard page at `app/(dashboard)/dashboard/gallery-images/page.tsx`
+- [ ] Public Landing Page Layer
+  - [ ] Create `GallerySection.tsx` component at `src/features/landing/GallerySection.tsx`
+  - [ ] Export `GallerySection` from `src/features/landing/index.ts`
+  - [ ] Add `<GallerySection />` to `app/(marketing)/page.tsx`

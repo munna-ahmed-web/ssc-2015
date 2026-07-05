@@ -9,6 +9,7 @@ import {
   Banknote,
   BarChart3,
   ImagePlay,
+  Images,
   Settings,
   Heart,
   ChevronRight,
@@ -49,6 +50,11 @@ const NAV_ITEMS = [
     label: "Hero Images",
     href: "/dashboard/hero-images",
     icon: ImagePlay,
+  },
+  {
+    label: "Gallery Images",
+    href: "/dashboard/gallery-images",
+    icon: Images,
   },
   {
     label: "Settings",

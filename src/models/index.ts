@@ -10,6 +10,7 @@
  */
 
 export { default as Contribution } from "./Contribution";
+export { default as GalleryImage } from "./GalleryImage";
 export { default as HeroImage } from "./HeroImage";
 export { default as Member } from "./Member";
 export { default as MembershipApplication } from "./MembershipApplication";
@@ -17,6 +18,7 @@ export { default as User } from "./User";
 
 // Re-export interfaces for convenient typing
 export type { IContribution } from "./Contribution";
+export type { IGalleryImage } from "./GalleryImage";
 export type { IHeroImage } from "./HeroImage";
 export type { IMember, MemberStatus } from "./Member";
 export type {

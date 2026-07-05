@@ -4,6 +4,7 @@ import {
   HeroSection,
   StatsSection,
   AboutSection,
+  GallerySection,
   HowItWorksSection,
   ValuesSection,
   CtaSection,
@@ -15,6 +16,7 @@ export default function HomePage() {
       <HeroSection />
       <StatsSection />
       <AboutSection />
+      <GallerySection />
       <HowItWorksSection />
       <ValuesSection />
       <CtaSection />
