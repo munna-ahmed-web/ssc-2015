@@ -1,0 +1,373 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* ─────────────────────────────────────────────
+   * LAYER 1 — PRIMITIVE TOKENS
+   * Raw palette. Never use directly in components.
+   * ───────────────────────────────────────────── */
+  --color-brand-50: #f4f6ef;
+  --color-brand-100: #e7eadd;
+  --color-brand-200: #d1d8be;
+  --color-brand-300: #b3be98;
+  --color-brand-400: #98a675;
+  --color-brand-500: #647247;
+  --color-brand-600: #56603e;
+  --color-brand-700: #4a5437;
+  --color-brand-800: #3d452f;
+  --color-brand-900: #363c2b;
+  --color-brand-950: #1b1f14;
+
+  /* ── Spacing scale (base 4px) ── */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-12: 48px;
+  --spacing-16: 64px;
+  --spacing-24: 96px;
+
+  /* ── Type scale ── */
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 32px;
+  --text-4xl: 48px;
+
+  /* variables created by shadcn default theme, we can customize them later */
+  --destructive: oklch(0.577 0.245 27.325);
+  --radius: 0.625rem;
+}
+
+@theme {
+  /* ─────────────────────────────────────────────
+   * LAYER 2 — SEMANTIC TOKENS (Light Mode Default)
+   * Maps intent → primitive. This is what you use
+   * in every component and utility class.
+   * ───────────────────────────────────────────── */
+
+  /* == Backgrounds & Surfaces == */
+  --color-bg-base: var(--color-brand-50); /* Page / app canvas          */
+  --color-bg-subtle: var(--color-brand-100); /* Sidebar, table stripes     */
+  --color-bg-muted: var(--color-brand-200); /* Disabled fields, skeletons */
+  /* --color-bg-overlay: var(--color-brand-900);  Modal backdrops   */
+  --color-bg-overlay: rgba(27, 31, 20, 0.6); /* Modal backdrops */
+
+  /* == Surfaces (cards, panels, sheets) == */
+  --color-surface-base: #ffffff; /* Default card / panel  */
+  --color-surface-raised: var(--color-brand-50); /* Elevated card         */
+  --color-surface-overlay: var(--color-brand-100); /* Dropdown / popover    */
+  --color-surface-sunken: var(--color-brand-200); /* Inset / well          */
+  --color-surface-hover: var(--color-brand-100);
+  --color-surface-active: var(--color-brand-200);
+
+  /* == Brand / Primary interactive == */
+  /* --color-primary: var(--color-brand-500); */
+  --color-primary-hover: var(--color-brand-600);
+  --color-primary-active: var(--color-brand-700);
+  --color-primary-subtle: var(--color-brand-100); /* Ghost / tinted bg     */
+  --color-primary-emphasis: var(--color-brand-800); /* Dark badge/tag bg     */
+
+  /* == Content (text & icons) == */
+  --color-content-strong: var(--color-brand-950); /* Headings, labels      */
+  --color-content-base: var(--color-brand-800); /* Body copy             */
+  --color-content-subtle: var(--color-brand-600); /* Captions, help text   */
+  --color-content-disabled: var(--color-brand-300); /* Disabled text         */
+  --color-content-inverse: var(--color-brand-50); /* Text on dark surfaces */
+  --color-content-on-primary: #ffffff; /* Text on primary btn   */
+
+  /* == Borders & Dividers == */
+  --color-border-base: var(--color-brand-200); /* Default inputs, cards   */
+  --color-border-strong: var(--color-brand-400); /* Focused, active         */
+  --color-border-subtle: var(--color-brand-100); /* Hairline dividers       */
+
+  /* == Interactive States == */
+  --color-focus-ring: var(--color-brand-400); /* Keyboard focus outline  */
+  --color-selection-bg: var(--color-brand-200); /* Text selection          */
+
+  /* == Feedback — Semantic (brand-harmonized) == */
+  --color-success: #4a7c59; /* Green, not in palette — keep neutral */
+  --color-success-subtle: #edf4ef;
+  --color-warning: #a07c2e;
+  --color-warning-subtle: #fdf6e3;
+  --color-error: #9e3a2f;
+  --color-error-subtle: #fdf0ee;
+  --color-info: var(--color-brand-500);
+  --color-info-subtle: var(--color-brand-100);
+
+  /* ── Semantic spacing ── */
+  --space-component-gap: var(--spacing-6); /* between cards */
+  --space-card-padding: var(--spacing-4); /* inside cards */
+  --space-section-gap: var(--spacing-12); /* between sections */
+  --space-page-padding-x: var(--spacing-6); /* page horizontal */
+  --space-inline-gap: var(--spacing-2); /* icon + label */
+  --space-field-gap: var(--spacing-4); /* between form fields */
+
+  /* Typography tokens (defined as CSS variables for easy theming, but could also be Tailwind font-size/weight utilities) */
+
+  /* ── Semantic text roles ── */
+  --text-body: var(--text-base); /* 16px */
+  --text-label: var(--text-sm); /* 14px */
+  --text-caption: var(--text-xs); /* 12px */
+  --text-h4: var(--text-xl); /* 20px */
+  --text-h3: var(--text-2xl); /* 24px */
+  --text-h2: var(--text-3xl); /* 32px */
+  --text-h1: var(--text-4xl); /* 48px */
+
+  /* ── Font weights ── */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-bold: 700;
+
+  /* ── Line heights ── */
+  --leading-tight: 1.15; /* H1, H2 */
+  --leading-snug: 1.35; /* H3, H4 */
+  --leading-normal: 1.6; /* body */
+  --leading-relaxed: 1.75; /* article */
+
+  /* ── Letter spacing ── */
+  --tracking-tight: -0.02em; /* large headings */
+  --tracking-normal: 0em; /* body */
+  --tracking-wide: 0.06em; /* labels, caps */
+}
+
+/* Class-based dark mode override (for JS-toggled themes) */
+.dark {
+  --color-bg-base: var(--color-brand-950);
+  --color-bg-subtle: var(--color-brand-900);
+  --color-bg-muted: var(--color-brand-800);
+
+  --color-surface-base: var(--color-brand-900);
+  --color-surface-raised: var(--color-brand-800);
+  --color-surface-overlay: var(--color-brand-700);
+  --color-surface-sunken: var(--color-brand-950);
+  --color-surface-hover: var(--color-brand-800);
+  --color-surface-active: var(--color-brand-700);
+
+  /* --color-primary: var(--color-brand-400); */
+  --color-primary-hover: var(--color-brand-300);
+  --color-primary-active: var(--color-brand-200);
+  --color-primary-subtle: var(--color-brand-800);
+  --color-primary-emphasis: var(--color-brand-200); /* light sage for badges on dark bg */
+
+  --color-content-strong: var(--color-brand-50);
+  --color-content-base: var(--color-brand-200);
+  --color-content-subtle: var(--color-brand-400);
+  --color-content-disabled: var(--color-brand-700);
+  --color-content-inverse: var(--color-brand-950);
+
+  --color-border-base: var(--color-brand-700);
+  --color-border-strong: var(--color-brand-500);
+  --color-border-subtle: var(--color-brand-800);
+
+  --color-focus-ring: var(--color-brand-400);
+  --color-selection-bg: var(--color-brand-700);
+
+  --color-success-subtle: rgba(74, 124, 89, 0.2);
+  --color-warning-subtle: rgba(160, 124, 46, 0.2);
+  --color-error-subtle: rgba(158, 58, 47, 0.2);
+  --color-info-subtle: var(--color-brand-800);
+
+  /* ─────────────────────────────────────────────
+   * Shadcn UI dark theming default design tokens.
+   * These has been overridden by our custom design tokens.
+   * ───────────────────────────────────────────── */
+
+  /* ── Backgrounds ─────────────────────────────── */
+  --background: var(--color-brand-950);
+  --card: var(--color-brand-900);
+  --popover: var(--color-brand-900);
+
+  /* ── Foregrounds ─────────────────────────────── */
+  --foreground: var(--color-brand-50);
+  --card-foreground: var(--color-brand-50);
+  --popover-foreground: var(--color-brand-50);
+
+  /* ── Primary ─────────────────────────────────── */
+  --primary: var(--color-brand-500);
+  /* --primary-foreground: var(--color-brand-950); */
+  --primary-foreground: var(--color-brand-100);
+
+  /* ── Secondary ───────────────────────────────── */
+  --secondary: var(--color-brand-800);
+  --secondary-foreground: var(--color-brand-100);
+
+  /* ── Muted ───────────────────────────────────── */
+  --muted: var(--color-brand-800);
+  --muted-foreground: var(--color-brand-400);
+
+  /* ── Accent ──────────────────────────────────── */
+  --accent: var(--color-brand-700);
+  --accent-foreground: var(--color-brand-100);
+
+  /* ── Destructive ─────────────────────────────── */
+  --destructive: oklch(0.704 0.191 22.216);
+
+  /* ── Border / Input / Ring ───────────────────── */
+  --border: var(--color-brand-700);
+  --input: var(--color-brand-700);
+  --ring: var(--color-brand-500);
+
+  /* ── Sidebar ─────────────────────────────────── */
+  --sidebar: var(--color-brand-900);
+  --sidebar-foreground: var(--color-brand-100);
+  --sidebar-primary: var(--color-brand-500);
+  --sidebar-primary-foreground: var(--color-brand-950);
+  --sidebar-accent: var(--color-brand-800);
+  --sidebar-accent-foreground: var(--color-brand-100);
+  --sidebar-border: var(--color-brand-700);
+  --sidebar-ring: var(--color-brand-500);
+
+  /* ── Charts ──────────────────────────────────── */
+  --chart-1: var(--color-brand-600);
+  --chart-2: var(--color-brand-500);
+  --chart-3: var(--color-brand-400);
+  --chart-4: var(--color-brand-300);
+  --chart-5: var(--color-brand-200);
+}
+
+@theme inline {
+  /* ─────────────────────────────────────────────
+   * Shadcn UI theming default design tokens.
+   * These has been overridden by our custom design tokens.
+   * ───────────────────────────────────────────── */
+  --font-heading: var(--font-display);
+  --font-sans: var(--font-sans);
+
+  /* ── Backgrounds ─────────────────────────────── */
+  --color-background: var(--color-brand-50);
+  --color-card: var(--color-brand-50);
+  --color-popover: var(--color-brand-50);
+
+  /* ── Foregrounds ─────────────────────────────── */
+  --color-foreground: var(--color-brand-950);
+  --color-card-foreground: var(--color-brand-950);
+  --color-popover-foreground: var(--color-brand-950);
+
+  /* ── Primary ─────────────────────────────────── */
+  --color-primary: var(--color-brand-500);
+  /* --color-primary-foreground: var(--color-brand-950); */
+  --color-primary-foreground: var(--color-brand-100);
+
+  /* ── Secondary ───────────────────────────────── */
+  --color-secondary: var(--color-brand-100);
+  --color-secondary-foreground: var(--color-brand-800);
+
+  /* ── Muted ───────────────────────────────────── */
+  --color-muted: var(--color-brand-100);
+  --color-muted-foreground: var(--color-brand-600);
+
+  /* ── Accent ──────────────────────────────────── */
+  --color-accent: var(--color-brand-200);
+  --color-accent-foreground: var(--color-brand-800);
+
+  /* ── Destructive ─────────────────────────────── */
+  --color-destructive: var(--destructive);
+
+  /* ── Border / Input / Ring ───────────────────── */
+  --color-border: var(--color-brand-200);
+  --color-input: var(--color-brand-200);
+  --color-ring: var(--color-brand-500);
+
+  /* ── Sidebar ─────────────────────────────────── */
+  --color-sidebar: var(--color-brand-100);
+  --color-sidebar-foreground: var(--color-brand-900);
+
+  --color-sidebar-primary: var(--color-brand-500);
+  --color-sidebar-primary-foreground: var(--color-brand-950);
+
+  --color-sidebar-accent: var(--color-brand-200);
+  --color-sidebar-border: var(--color-brand-200);
+  --color-sidebar-ring: var(--color-brand-500);
+
+  /* ── Charts ──────────────────────────────────── */
+  --color-chart-1: var(--color-brand-200);
+  --color-chart-2: var(--color-brand-300);
+  --color-chart-3: var(--color-brand-400);
+  --color-chart-4: var(--color-brand-500);
+  --color-chart-5: var(--color-brand-600);
+
+  /* ── Feedback colors exposed as Tailwind utilities ───────────────────────── */
+  --color-warning: var(--color-warning);
+  --color-warning-subtle: var(--color-warning-subtle);
+  --color-success: var(--color-success);
+  --color-success-subtle: var(--color-success-subtle);
+  --color-error: var(--color-error);
+  --color-error-subtle: var(--color-error-subtle);
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    font-weight: var(--weight-regular);
+    line-height: var(--leading-normal);
+    @apply bg-background text-foreground;
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-size: var(--text-h1);
+    font-weight: var(--weight-bold);
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight);
+    color: var(--color-content-strong);
+  }
+  h2 {
+    font-family: var(--font-display);
+    font-size: var(--text-h2);
+    font-weight: var(--weight-bold);
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight);
+    color: var(--color-content-strong);
+  }
+  h3 {
+    font-size: var(--text-h3);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-snug);
+    color: var(--color-content-strong);
+  }
+  h4 {
+    font-size: var(--text-h4);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-snug);
+    color: var(--color-content-strong);
+  }
+  p {
+    font-size: var(--text-body);
+    line-height: var(--leading-normal);
+    color: var(--color-content-base);
+  }
+  a {
+    color: var(--color-text-link);
+    text-underline-offset: 3px;
+  }
+  a:hover {
+    color: var(--color-text-link-hover);
+  }
+  code,
+  kbd,
+  pre {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+  }
+  pre {
+    background: var(--color-surface-sunken);
+    padding: var(--spacing-4);
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+  }
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+  }
+}
