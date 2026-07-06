@@ -140,6 +140,26 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
         </Card>
 
         <div className="space-y-6">
+          {app.photoUrl && (
+            <Card className="h-fit">
+              <CardHeader>
+                <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  Applicant Photo
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center py-4">
+                <div className="size-32 rounded-xl overflow-hidden border border-border bg-muted flex items-center justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={app.photoUrl}
+                    alt={app.fullName}
+                    className="size-full object-cover"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">

@@ -1,29 +1,55 @@
 import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
+import { z } from "zod";
 
 import { verifyRefreshToken, signAccessToken } from "@/lib/jwt";
-import { COOKIE_ACCESS, COOKIE_REFRESH } from "@/lib/auth";
+import {
+  COOKIE_REFRESH,
+  buildAuthTokens,
+  setAuthCookies,
+} from "@/lib/auth";
+import { apiError, apiSuccess } from "@/lib/api/response";
 
-const ACCESS_MAX_AGE = 15 * 60;
+const RefreshBodySchema = z.object({
+  refreshToken: z.string().min(1).optional(),
+});
 
+/**
+ * POST /api/auth/refresh
+ *
+ * Web: send refresh token via httpOnly cookie (empty body ok).
+ * Mobile: send { "refreshToken": "..." } in JSON body.
+ */
 export async function POST(req: NextRequest) {
   try {
-    const refreshToken = req.cookies.get(COOKIE_REFRESH)?.value;
+    let refreshToken = req.cookies.get(COOKIE_REFRESH)?.value ?? null;
+
+    const contentType = req.headers.get("content-type") ?? "";
+    if (contentType.includes("application/json")) {
+      const raw = await req.json().catch(() => ({}));
+      const parsed = RefreshBodySchema.safeParse(raw);
+      if (parsed.success && parsed.data.refreshToken) {
+        refreshToken = parsed.data.refreshToken;
+      }
+    }
+
     if (!refreshToken) {
-      return NextResponse.json({ success: false, error: "No refresh token" }, { status: 401 });
+      return apiError("UNAUTHORIZED", "Refresh token is required.", 401);
     }
 
     const payload = verifyRefreshToken(refreshToken);
-    const newAccessToken = signAccessToken({ sub: payload.sub, role: payload.role });
+    const accessToken = signAccessToken({ sub: payload.sub, role: payload.role });
+    const tokens = buildAuthTokens(accessToken, refreshToken);
 
-    const isProd = process.env.NODE_ENV === "production";
-    const res = NextResponse.json({ success: true });
-    res.headers.set(
-      "Set-Cookie",
-      `${COOKIE_ACCESS}=${newAccessToken}; Max-Age=${ACCESS_MAX_AGE}; httpOnly; SameSite=Strict; Path=/${isProd ? "; Secure" : ""}`,
-    );
+    const res = apiSuccess({
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresIn: tokens.expiresIn,
+      refreshExpiresIn: tokens.refreshExpiresIn,
+    }, { message: "Token refreshed." });
+
+    setAuthCookies(res, tokens);
     return res;
   } catch {
-    return NextResponse.json({ success: false, error: "Invalid refresh token" }, { status: 401 });
+    return apiError("UNAUTHORIZED", "Invalid or expired refresh token.", 401);
   }
 }

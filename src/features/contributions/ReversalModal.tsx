@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatPeriodLabel } from "@/lib/periods";
+import { getApiErrorMessage } from "@/lib/api/response";
 
 interface ReversalModalProps {
   contributionId: string;
@@ -53,7 +54,7 @@ export default function ReversalModal({
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        setError(data.error ?? "Reversal failed.");
+        setError(getApiErrorMessage(data, "Reversal failed."));
         return;
       }
       onClose();

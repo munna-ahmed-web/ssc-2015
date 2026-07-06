@@ -1,8 +1,11 @@
 export type AppErrorCode =
+  | "BAD_REQUEST"
   | "UNAUTHORIZED"
   | "FORBIDDEN"
   | "NOT_FOUND"
   | "VALIDATION_ERROR"
+  | "DUPLICATE_ENTRY"
+  | "CONFLICT"
   | "RATE_LIMITED"
   | "SERVER_ERROR"
   | "TIMEOUT"

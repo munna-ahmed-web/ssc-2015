@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { getApiErrorMessage } from "@/lib/api/response";
 
 interface RejectModalProps {
   applicationId: string;
@@ -41,7 +42,7 @@ export default function RejectModal({ applicationId, open, onClose }: RejectModa
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        setError(data.error ?? "Failed to reject application.");
+        setError(getApiErrorMessage(data, "Failed to reject application."));
         return;
       }
       onClose();

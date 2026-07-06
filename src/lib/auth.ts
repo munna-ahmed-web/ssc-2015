@@ -1,23 +1,49 @@
 /**
  * Server-side auth helpers for Route Handlers and Server Components.
- * Uses jsonwebtoken (Node.js runtime only — NOT for middleware.ts).
+ * Supports web (httpOnly cookies) and mobile/API (Authorization: Bearer).
  */
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 import { verifyAccessToken, type TokenPayload } from "@/lib/jwt";
+import { apiUnauthorized } from "@/lib/api/response";
 
-export const COOKIE_ACCESS = "access_token";
-export const COOKIE_REFRESH = "refresh_token";
+import {
+  COOKIE_ACCESS,
+  COOKIE_REFRESH,
+  parseBearerToken,
+} from "./auth/constants";
+
+export {
+  COOKIE_ACCESS,
+  COOKIE_REFRESH,
+  ACCESS_MAX_AGE,
+  REFRESH_MAX_AGE,
+  buildAuthTokens,
+  serializeAuthResponse,
+  setAuthCookies,
+  clearAuthCookies,
+  getAccessTokenFromRequest,
+  parseBearerToken,
+} from "./auth/constants";
+export type { AuthTokens } from "./auth/constants";
+
+async function resolveAccessToken(): Promise<string | null> {
+  const headerStore = await headers();
+  const bearer = parseBearerToken(headerStore.get("authorization"));
+  if (bearer) return bearer;
+
+  const store = await cookies();
+  return store.get(COOKIE_ACCESS)?.value ?? null;
+}
 
 /**
- * Reads and verifies the access_token cookie.
+ * Reads access token from Bearer header or httpOnly cookie.
  * Returns the decoded payload or null if missing / invalid / expired.
  */
 export async function getSessionUser(): Promise<TokenPayload | null> {
   try {
-    const store = await cookies();
-    const token = store.get(COOKIE_ACCESS)?.value;
+    const token = await resolveAccessToken();
     if (!token) return null;
     return verifyAccessToken(token);
   } catch {
@@ -32,10 +58,7 @@ export async function getSessionUser(): Promise<TokenPayload | null> {
 export async function requireAdmin(): Promise<TokenPayload> {
   const user = await getSessionUser();
   if (!user || user.role !== "admin") {
-    throw new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
-    });
+    throw apiUnauthorized();
   }
   return user;
 }

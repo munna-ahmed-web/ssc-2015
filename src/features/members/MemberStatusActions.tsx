@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CheckCircle2, Loader2, PlayCircle, StopCircle } from "lucide-react";
+import { AlertTriangle, Loader2, PlayCircle, StopCircle } from "lucide-react";
+import { getApiErrorMessage } from "@/lib/api/response";
 import { Button } from "@/components/ui/button";
 import type { MemberStatus } from "@/models";
 
@@ -20,7 +21,7 @@ export default function MemberStatusActions({ memberId, currentStatus }: MemberS
     // Confirm terminal status change
     if (newStatus === "exited") {
       const confirmExit = confirm(
-        "Are you sure you want to mark this member as exited? This is a terminal state and indicates they have formally left the foundation."
+        "Are you sure you want to mark this member as exited? This is a terminal state and indicates they have formally left the foundation.",
       );
       if (!confirmExit) return;
     }
@@ -37,7 +38,7 @@ export default function MemberStatusActions({ memberId, currentStatus }: MemberS
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setError(data.error ?? "Failed to update member status.");
+        setError(getApiErrorMessage(data, "Failed to update member status."));
         return;
       }
 
@@ -66,7 +67,11 @@ export default function MemberStatusActions({ memberId, currentStatus }: MemberS
             disabled={updating}
             className="gap-2 bg-green-600 hover:bg-green-700 text-white"
           >
-            {updating ? <Loader2 className="size-4 animate-spin" /> : <PlayCircle className="size-4" />}
+            {updating ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <PlayCircle className="size-4" />
+            )}
             Reactivate Member
           </Button>
         )}
@@ -80,7 +85,11 @@ export default function MemberStatusActions({ memberId, currentStatus }: MemberS
             disabled={updating}
             className="gap-2 border-yellow-300 text-yellow-700 hover:bg-yellow-50 dark:border-yellow-800 dark:text-yellow-400 dark:hover:bg-yellow-900/20"
           >
-            {updating ? <Loader2 className="size-4 animate-spin" /> : <StopCircle className="size-4" />}
+            {updating ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <StopCircle className="size-4" />
+            )}
             Suspend Member
           </Button>
         )}
@@ -94,7 +103,11 @@ export default function MemberStatusActions({ memberId, currentStatus }: MemberS
             disabled={updating}
             className="gap-2"
           >
-            {updating ? <Loader2 className="size-4 animate-spin" /> : <AlertTriangle className="size-4" />}
+            {updating ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <AlertTriangle className="size-4" />
+            )}
             Mark as Exited
           </Button>
         )}

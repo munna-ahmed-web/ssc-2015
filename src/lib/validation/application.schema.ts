@@ -46,6 +46,8 @@ export const ApplicationSchema = z.object({
 
   requestedContributionType: z.enum(["weekly", "monthly"]),
 
+  photoUrl: z.string().optional(),
+
   // Use z.number() with preprocess so the form type is `number` (not `unknown`)
   requestedContributionAmount: z.preprocess(
     (val) => (val === "" || val === undefined ? undefined : Number(val)),

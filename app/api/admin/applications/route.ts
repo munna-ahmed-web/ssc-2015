@@ -1,9 +1,9 @@
 import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
 
 import { connectDB } from "@/lib/db";
 import { MembershipApplication } from "@/models";
 import { requireAdmin } from "@/lib/auth";
+import { apiSuccess, handleRouteError } from "@/lib/api/response";
 
 /**
  * GET /api/admin/applications
@@ -20,7 +20,6 @@ export async function GET(req: NextRequest) {
     const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
     const limit = Math.min(100, parseInt(searchParams.get("limit") ?? "20"));
 
-    // Build filter
     const filter: Record<string, unknown> = {};
     if (status !== "all") filter.status = status;
     if (search) {
@@ -40,14 +39,13 @@ export async function GET(req: NextRequest) {
       MembershipApplication.countDocuments(filter),
     ]);
 
-    return NextResponse.json({
-      success: true,
-      data: applications,
-      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    return apiSuccess(applications, {
+      meta: {
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      },
     });
   } catch (err) {
     if (err instanceof Response) return err;
-    console.error("[GET /api/admin/applications]", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    return handleRouteError(err, "[GET /api/admin/applications]");
   }
 }

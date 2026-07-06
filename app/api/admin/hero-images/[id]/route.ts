@@ -1,5 +1,4 @@
 import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { z } from "zod";
 
@@ -7,6 +6,7 @@ import { connectDB } from "@/lib/db";
 import { HeroImage } from "@/models";
 import { requireAdmin } from "@/lib/auth";
 import { deleteFromCloudinary } from "@/lib/cloudinary";
+import { apiError, apiSuccess, handleRouteError } from "@/lib/api/response";
 
 const UpdateSchema = z.object({
   altText: z.string().min(1).max(200).trim().optional(),
@@ -14,8 +14,6 @@ const UpdateSchema = z.object({
   order: z.number().int().min(0).optional(),
   isActive: z.boolean().optional(),
 });
-
-// ─── PATCH /api/admin/hero-images/[id] ────────────────────────────────────────
 
 export async function PATCH(
   req: NextRequest,
@@ -27,21 +25,23 @@ export async function PATCH(
 
     const { id } = await params;
     if (!mongoose.isValidObjectId(id)) {
-      return NextResponse.json({ success: false, error: "Invalid ID" }, { status: 400 });
+      return apiError("BAD_REQUEST", "Invalid image ID.", 400);
     }
 
     const body = await req.json();
     const parsed = UpdateSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, error: "Validation failed", details: parsed.error.flatten().fieldErrors },
-        { status: 422 },
+      return apiError(
+        "VALIDATION_ERROR",
+        "Validation failed.",
+        422,
+        parsed.error.flatten().fieldErrors,
       );
     }
 
     const image = await HeroImage.findById(id);
     if (!image) {
-      return NextResponse.json({ success: false, error: "Image not found" }, { status: 404 });
+      return apiError("NOT_FOUND", "Image not found.", 404);
     }
 
     const data = parsed.data;
@@ -52,15 +52,12 @@ export async function PATCH(
 
     await image.save();
 
-    return NextResponse.json({ success: true, data: image });
+    return apiSuccess(image);
   } catch (err) {
     if (err instanceof Response) return err;
-    console.error("[PATCH /api/admin/hero-images/:id]", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    return handleRouteError(err, "[PATCH /api/admin/hero-images/:id]");
   }
 }
-
-// ─── DELETE /api/admin/hero-images/[id] ───────────────────────────────────────
 
 export async function DELETE(
   _req: NextRequest,
@@ -72,25 +69,23 @@ export async function DELETE(
 
     const { id } = await params;
     if (!mongoose.isValidObjectId(id)) {
-      return NextResponse.json({ success: false, error: "Invalid ID" }, { status: 400 });
+      return apiError("BAD_REQUEST", "Invalid image ID.", 400);
     }
 
     const image = await HeroImage.findById(id);
     if (!image) {
-      return NextResponse.json({ success: false, error: "Image not found" }, { status: 404 });
+      return apiError("NOT_FOUND", "Image not found.", 404);
     }
 
-    // Remove from Cloudinary if publicId exists
     if ((image as unknown as { publicId?: string }).publicId) {
       await deleteFromCloudinary((image as unknown as { publicId: string }).publicId);
     }
 
     await image.deleteOne();
 
-    return NextResponse.json({ success: true, message: "Image deleted successfully." });
+    return apiSuccess({ id }, { message: "Image deleted successfully." });
   } catch (err) {
     if (err instanceof Response) return err;
-    console.error("[DELETE /api/admin/hero-images/:id]", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    return handleRouteError(err, "[DELETE /api/admin/hero-images/:id]");
   }
 }

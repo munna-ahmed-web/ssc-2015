@@ -24,19 +24,25 @@ export interface User {
 
 // ─── API response envelopes ───────────────────────────────────────────────────
 
+export interface ApiErrorBody {
+  code: string;
+  message: string;
+  details?: Record<string, string[]>;
+}
+
 export interface ApiSuccess<T = unknown> {
   success: true;
   data: T;
   message?: string;
+  meta?: Record<string, unknown>;
 }
 
-export interface ApiError {
+export interface ApiFailure {
   success: false;
-  error: string;
-  details?: unknown; // Zod validation errors, etc.
+  error: ApiErrorBody;
 }
 
-export type ApiResponse<T = unknown> = ApiSuccess<T> | ApiError;
+export type ApiResponse<T = unknown> = ApiSuccess<T> | ApiFailure;
 
 // ─── Pagination ───────────────────────────────────────────────────────────────
 

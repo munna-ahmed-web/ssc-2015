@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getApiErrorMessage } from "@/lib/api/response";
 import RejectModal from "./RejectModal";
 import type { ApplicationStatus } from "@/models";
 
@@ -48,7 +49,7 @@ export default function ApplicationActions({ applicationId, status }: Applicatio
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        setError(data.error ?? "Approval failed.");
+        setError(getApiErrorMessage(data, "Approval failed."));
         return;
       }
       router.refresh();

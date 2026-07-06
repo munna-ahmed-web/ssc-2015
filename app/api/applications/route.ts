@@ -1,100 +1,137 @@
 import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
-import { ZodError } from "zod";
 
 import { connectDB } from "@/lib/db";
 import { MembershipApplication } from "@/models";
 import { ApplicationSchema } from "@/lib/validation/application.schema";
+import { uploadToCloudinary } from "@/lib/cloudinary";
+import { apiError, apiSuccess, handleRouteError } from "@/lib/api/response";
+import {
+  duplicateSummaryMessage,
+  findApplicationDuplicates,
+} from "@/lib/applications/duplicate-check";
+
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+
+function serializeApplication(application: {
+  _id: { toString(): string };
+  status: string;
+  fullName: string;
+  phone: string;
+  nid: string;
+  createdAt: Date;
+}) {
+  return {
+    id: application._id.toString(),
+    status: application.status,
+    fullName: application.fullName,
+    phone: application.phone,
+    nid: application.nid,
+    createdAt: application.createdAt.toISOString(),
+  };
+}
 
 /**
  * POST /api/applications
- * Public — no auth required.
- * Validates body, soft-checks for duplicates, creates a pending application.
+ * Public — create a membership application.
+ *
+ * Accepts:
+ *  - application/json (mobile / API clients without photo upload)
+ *  - multipart/form-data (web form with optional photo)
+ *
+ * Responses:
+ *  - 201 Created — application stored
+ *  - 409 Conflict — duplicate phone or NID (pending/approved)
+ *  - 422 Unprocessable Entity — validation errors
+ *  - 413 Payload Too Large — photo exceeds limit
+ *  - 415 Unsupported Media Type — invalid photo type
  */
 export async function POST(req: NextRequest) {
   try {
     await connectDB();
 
-    const body = await req.json();
-    const data = ApplicationSchema.parse(body);
+    const contentType = req.headers.get("content-type") || "";
+    let data: ReturnType<typeof ApplicationSchema.parse>;
 
-    // Clean up empty optional fields
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await req.formData();
+      const file = formData.get("file") as File | null;
+      let photoUrl: string | undefined;
+
+      if (file && file.size > 0) {
+        if (!ACCEPTED_IMAGE_TYPES.includes(file.type as (typeof ACCEPTED_IMAGE_TYPES)[number])) {
+          return apiError(
+            "UNSUPPORTED_MEDIA_TYPE",
+            "Only JPEG, PNG, and WebP images are accepted.",
+            415,
+          );
+        }
+        if (file.size > MAX_PHOTO_BYTES) {
+          return apiError("PAYLOAD_TOO_LARGE", "Photo must be smaller than 5 MB.", 413);
+        }
+
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const { url } = await uploadToCloudinary(buffer, {
+          folder: "foundation/member_photos",
+          transformation: [
+            {
+              width: 400,
+              height: 400,
+              crop: "fill",
+              gravity: "face",
+              quality: "auto",
+              fetch_format: "auto",
+            },
+          ],
+        });
+        photoUrl = url;
+      }
+
+      const rawData = {
+        fullName: formData.get("fullName") as string,
+        guardianName: formData.get("guardianName") as string,
+        phone: formData.get("phone") as string,
+        email: formData.get("email") as string,
+        nid: formData.get("nid") as string,
+        address: formData.get("address") as string,
+        dateOfBirth: formData.get("dateOfBirth") as string,
+        occupation: formData.get("occupation") as string,
+        requestedContributionType: formData.get("requestedContributionType") as string,
+        requestedContributionAmount: formData.get("requestedContributionAmount") as string,
+        photoUrl,
+      };
+
+      data = ApplicationSchema.parse(rawData);
+    } else {
+      const body = await req.json();
+      data = ApplicationSchema.parse(body);
+    }
+
     if (data.email === "") data.email = undefined;
     if (data.occupation === "") data.occupation = undefined;
 
-    await MembershipApplication.create({
+    const duplicateResult = await findApplicationDuplicates(data.phone, data.nid);
+    if (duplicateResult.duplicate) {
+      return apiError(
+        "DUPLICATE_ENTRY",
+        duplicateSummaryMessage(duplicateResult.conflicts),
+        409,
+        duplicateResult.fieldErrors,
+      );
+    }
+
+    const application = await MembershipApplication.create({
       ...data,
       dateOfBirth: new Date(data.dateOfBirth),
       status: "pending",
     });
 
-    return NextResponse.json(
-      { success: true, message: "Application submitted successfully." },
-      { status: 201 },
-    );
-  } catch (err) {
-    if (err instanceof ZodError) {
-      return NextResponse.json(
-        { success: false, error: "Validation failed", details: err.flatten().fieldErrors },
-        { status: 422 },
-      );
-    }
-
-    // Mongoose duplicate key — shouldn't happen on applications (no unique fields),
-    // but handle gracefully just in case
-    if ((err as { code?: number }).code === 11000) {
-      return NextResponse.json(
-        { success: false, error: "A duplicate entry was detected." },
-        { status: 409 },
-      );
-    }
-
-    console.error("[POST /api/applications]", err);
-    return NextResponse.json(
-      { success: false, error: "Something went wrong. Please try again." },
-      { status: 500 },
-    );
-  }
-}
-
-/**
- * GET /api/applications/check?phone=xxx&nid=xxx
- * Public — soft duplicate check used by the form (does not block submission).
- */
-export async function GET(req: NextRequest) {
-  try {
-    await connectDB();
-
-    const { searchParams } = req.nextUrl;
-    const phone = searchParams.get("phone")?.trim();
-    const nid = searchParams.get("nid")?.trim();
-
-    if (!phone && !nid) {
-      return NextResponse.json({ duplicate: false });
-    }
-
-    const orFilter = [];
-    if (phone) orFilter.push({ phone });
-    if (nid) orFilter.push({ nid });
-
-    const existing = await MembershipApplication.findOne({
-      $or: orFilter,
-      status: { $in: ["pending", "approved"] },
-    })
-      .select("status phone nid")
-      .lean();
-
-    if (!existing) {
-      return NextResponse.json({ duplicate: false });
-    }
-
-    return NextResponse.json({
-      duplicate: true,
-      field: existing.phone === phone ? "phone" : "nid",
-      status: existing.status,
+    return apiSuccess(serializeApplication(application), {
+      message: "Application submitted successfully.",
+      status: 201,
     });
   } catch (err) {
-    console.error("[GET /api/applications/check]", err);
-    return NextResponse.json({ duplicate: false });
+    return handleRouteError(err, "[POST /api/applications]");
   }
 }

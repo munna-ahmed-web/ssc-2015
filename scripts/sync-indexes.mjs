@@ -41,8 +41,22 @@ const applicationSchema = new mongoose.Schema(
   { timestamps: true, collection: "membership_applications" }
 );
 applicationSchema.index({ status: 1, createdAt: -1 });
-applicationSchema.index({ phone: 1 });
-applicationSchema.index({ nid: 1 });
+applicationSchema.index(
+  { phone: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { status: { $in: ["pending", "approved"] } },
+    name: "unique_phone_active_application",
+  }
+);
+applicationSchema.index(
+  { nid: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { status: { $in: ["pending", "approved"] } },
+    name: "unique_nid_active_application",
+  }
+);
 
 const memberSchema = new mongoose.Schema(
   {

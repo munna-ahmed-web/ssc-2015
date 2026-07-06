@@ -2,8 +2,8 @@
  * JWT token utilities.
  *
  * Strategy:
- *  - Access token:  short-lived (15 min), sent in Authorization header
- *  - Refresh token: long-lived (7 days), stored in httpOnly Secure cookie
+ *  - Access token:  short-lived (15 min), Bearer header or httpOnly cookie
+ *  - Refresh token: long-lived (7 days), request body or httpOnly cookie
  *
  * Both tokens are signed with separate secrets to allow independent rotation.
  */

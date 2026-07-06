@@ -1,7 +1,6 @@
-import { NextResponse } from "next/server";
-
 import { connectDB } from "@/lib/db";
 import { GalleryImage } from "@/models";
+import { apiSuccess, handleRouteError } from "@/lib/api/response";
 
 export async function GET() {
   try {
@@ -11,9 +10,8 @@ export async function GET() {
       .sort({ order: 1, createdAt: -1 })
       .lean();
 
-    return NextResponse.json({ success: true, data: images });
+    return apiSuccess(images);
   } catch (err) {
-    console.error("[GET /api/gallery-images]", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    return handleRouteError(err, "[GET /api/gallery-images]");
   }
 }

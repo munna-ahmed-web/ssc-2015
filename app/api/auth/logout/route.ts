@@ -1,19 +1,8 @@
-import { NextResponse } from "next/server";
-
-import { COOKIE_ACCESS, COOKIE_REFRESH } from "@/lib/auth";
+import { clearAuthCookies } from "@/lib/auth";
+import { apiSuccess } from "@/lib/api/response";
 
 export async function POST() {
-  const res = NextResponse.json({ success: true });
-
-  // Clear both cookies immediately by setting Max-Age=0
-  res.headers.append(
-    "Set-Cookie",
-    `${COOKIE_ACCESS}=; Max-Age=0; httpOnly; SameSite=Strict; Path=/`,
-  );
-  res.headers.append(
-    "Set-Cookie",
-    `${COOKIE_REFRESH}=; Max-Age=0; httpOnly; SameSite=Strict; Path=/api/auth/refresh`,
-  );
-
+  const res = apiSuccess({}, { message: "Logged out successfully." });
+  clearAuthCookies(res);
   return res;
 }

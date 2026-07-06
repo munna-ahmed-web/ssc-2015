@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import Image from "next/image";
 import { useForm, Controller, type SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -10,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { ApplicationSchema, type ApplicationFormData } from "@/lib/validation/application.schema";
+import { getApiErrorCode, getApiErrorDetails, getApiErrorMessage } from "@/lib/api/response";
 
 // ─── Inline FieldError (avoids installing extra shadcn component) ─────────────
 
@@ -28,27 +29,29 @@ function FieldError({ message }: { message?: string }) {
   return <p className="text-xs text-destructive mt-1">{message}</p>;
 }
 
-// ─── Duplicate warning banner ─────────────────────────────────────────────────
+// ─── Duplicate conflict (from GET /api/applications/check) ────────────────────
 
-interface DuplicateWarning {
+interface DuplicateConflict {
   field: "phone" | "nid";
   status: "pending" | "approved";
+  message: string;
 }
 
-function DuplicateWarningBanner({ warning }: { warning: DuplicateWarning }) {
+function DuplicateWarningBanner({ conflicts }: { conflicts: DuplicateConflict[] }) {
   return (
-    <div className="flex gap-3 rounded-lg border border-warning/40 bg-warning/10 p-4">
-      <AlertTriangle className="size-4 shrink-0 mt-0.5 text-warning" />
-      <p className="text-sm text-warning">
-        <strong>Heads up:</strong> A {warning.status === "pending" ? "pending" : "approved"}{" "}
-        application with this {warning.field === "phone" ? "phone number" : "National ID"} already
-        exists. You can still submit, but it may be reviewed carefully.
-      </p>
+    <div className="flex gap-3 rounded-lg border border-destructive/40 bg-destructive/10 p-4">
+      <AlertTriangle className="size-4 shrink-0 mt-0.5 text-destructive" />
+      <div className="space-y-1 text-sm text-destructive">
+        <p className="font-medium">This application cannot be submitted.</p>
+        <ul className="list-disc pl-4 space-y-0.5">
+          {conflicts.map((conflict) => (
+            <li key={conflict.field}>{conflict.message}</li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
-
-// ─── Form sections ─────────────────────────────────────────────────────────────
 
 function SectionHeader({ step, title, desc }: { step: string; title: string; desc: string }) {
   return (
@@ -68,9 +71,41 @@ function SectionHeader({ step, title, desc }: { step: string; title: string; des
 
 export default function ApplicationForm() {
   const router = useRouter();
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [duplicateWarning, setDuplicateWarning] = useState<DuplicateWarning | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  const [duplicateConflicts, setDuplicateConflicts] = useState<DuplicateConflict[]>([]);
   const [checkingDuplicate, setCheckingDuplicate] = useState(false);
+
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setPhotoError(null);
+    if (!file) {
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      return;
+    }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setPhotoError("Only JPEG, PNG, and WebP images are allowed.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setPhotoError("Image size must be smaller than 5 MB.");
+      return;
+    }
+
+    setPhotoFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPhotoPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const {
     register,
@@ -89,22 +124,28 @@ export default function ApplicationForm() {
 
   // ── Duplicate check ──────────────────────────────────────────────────────
 
-  const checkDuplicate = async (phone?: string, nid?: string) => {
-    if (!phone && !nid) return;
+  const checkDuplicate = async (phoneValue?: string, nidValue?: string) => {
+    const phoneToCheck = phoneValue?.trim();
+    const nidToCheck = nidValue?.trim();
+    if (!phoneToCheck && !nidToCheck) return;
+
     setCheckingDuplicate(true);
     try {
       const params = new URLSearchParams();
-      if (phone) params.set("phone", phone);
-      if (nid) params.set("nid", nid);
-      const res = await fetch(`/api/applications?${params}`);
-      const data = await res.json();
-      if (data.duplicate) {
-        setDuplicateWarning({ field: data.field, status: data.status });
+      if (phoneToCheck) params.set("phone", phoneToCheck);
+      if (nidToCheck) params.set("nid", nidToCheck);
+
+      const res = await fetch(`/api/applications/check?${params}`);
+      const body = await res.json();
+      const payload = body.data ?? body;
+
+      if (payload.duplicate && Array.isArray(payload.conflicts)) {
+        setDuplicateConflicts(payload.conflicts);
       } else {
-        setDuplicateWarning(null);
+        setDuplicateConflicts([]);
       }
     } catch {
-      // Silently fail — soft check only
+      // Non-blocking pre-check — server enforces on submit
     } finally {
       setCheckingDuplicate(false);
     }
@@ -117,17 +158,60 @@ export default function ApplicationForm() {
 
   const onSubmit: SubmitHandler<ApplicationFormData> = async (data) => {
     setSubmitError(null);
+    setFieldErrors({});
+
+    if (duplicateConflicts.length > 0) {
+      setSubmitError("Please fix the duplicate phone number or National ID before submitting.");
+      return;
+    }
+
+    if (photoError) {
+      setSubmitError("Please resolve the photo error first.");
+      return;
+    }
+
     try {
+      const formData = new FormData();
+      formData.append("fullName", data.fullName);
+      formData.append("guardianName", data.guardianName);
+      formData.append("phone", data.phone);
+      if (data.email) formData.append("email", data.email);
+      formData.append("nid", data.nid);
+      formData.append("address", data.address);
+      formData.append("dateOfBirth", data.dateOfBirth);
+      if (data.occupation) formData.append("occupation", data.occupation);
+      formData.append("requestedContributionType", data.requestedContributionType);
+      formData.append("requestedContributionAmount", String(data.requestedContributionAmount));
+
+      if (photoFile) {
+        formData.append("file", photoFile);
+      }
+
       const res = await fetch("/api/applications", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: formData,
       });
       const result = await res.json();
+
       if (!res.ok || !result.success) {
-        setSubmitError(result.error ?? "Submission failed. Please try again.");
+        const details = getApiErrorDetails(result);
+        if (details) setFieldErrors(details);
+
+        if (getApiErrorCode(result) === "DUPLICATE_ENTRY" && details) {
+          const conflicts: DuplicateConflict[] = [];
+          if (details.phone?.[0]) {
+            conflicts.push({ field: "phone", status: "pending", message: details.phone[0] });
+          }
+          if (details.nid?.[0]) {
+            conflicts.push({ field: "nid", status: "pending", message: details.nid[0] });
+          }
+          if (conflicts.length > 0) setDuplicateConflicts(conflicts);
+        }
+
+        setSubmitError(getApiErrorMessage(result, "Submission failed. Please try again."));
         return;
       }
+
       router.push("/become-a-member/success");
     } catch {
       setSubmitError("Network error. Please check your connection and try again.");
@@ -177,10 +261,10 @@ export default function ApplicationForm() {
               className={errors.phone ? "border-destructive" : ""}
               {...register("phone")}
               onBlur={() => {
-                if (phone && !errors.phone) checkDuplicate(phone, undefined);
+                if (phone && !errors.phone) checkDuplicate(phone, nid);
               }}
             />
-            <FieldError message={errors.phone?.message} />
+            <FieldError message={errors.phone?.message ?? fieldErrors.phone?.[0]} />
           </div>
 
           {/* Email */}
@@ -209,10 +293,10 @@ export default function ApplicationForm() {
               className={errors.nid ? "border-destructive" : ""}
               {...register("nid")}
               onBlur={() => {
-                if (nid && !errors.nid) checkDuplicate(undefined, nid);
+                if (nid && !errors.nid) checkDuplicate(phone, nid);
               }}
             />
-            <FieldError message={errors.nid?.message} />
+            <FieldError message={errors.nid?.message ?? fieldErrors.nid?.[0]} />
           </div>
 
           {/* Date of Birth */}
@@ -256,8 +340,10 @@ export default function ApplicationForm() {
         </div>
       </section>
 
-      {/* ── Duplicate warning ── */}
-      {duplicateWarning && <DuplicateWarningBanner warning={duplicateWarning} />}
+      {/* ── Duplicate block ── */}
+      {duplicateConflicts.length > 0 && (
+        <DuplicateWarningBanner conflicts={duplicateConflicts} />
+      )}
       {checkingDuplicate && (
         <p className="text-xs text-muted-foreground flex items-center gap-2">
           <Loader2 className="size-3 animate-spin" /> Checking for duplicates…
@@ -319,22 +405,67 @@ export default function ApplicationForm() {
         <SectionHeader
           step="3"
           title="Profile Photo"
-          desc="Upload a recent passport-size photo (optional in v1)"
+          desc="Upload a recent passport-size photo (optional)"
         />
-        <div className="flex items-center gap-4 p-6 rounded-xl border-2 border-dashed border-border hover:border-primary/40 transition-colors">
-          <div className="flex size-12 items-center justify-center rounded-xl bg-muted">
-            <Upload className="size-5 text-muted-foreground" />
+
+        <div className="flex flex-col sm:flex-row items-center gap-5 p-6 rounded-xl border-2 border-dashed border-border hover:border-primary/40 transition-colors bg-card">
+          <div
+            onClick={() => photoInputRef.current?.click()}
+            className="relative size-24 shrink-0 rounded-xl overflow-hidden bg-muted border border-border flex flex-col items-center justify-center cursor-pointer hover:bg-muted/70 transition-colors group"
+          >
+            {photoPreview ? (
+              <Image
+                src={photoPreview}
+                alt="Profile preview"
+                fill
+                className="object-cover animate-in fade-in duration-300"
+              />
+            ) : (
+              <Upload className="size-6 text-muted-foreground/60 group-hover:text-primary transition-colors" />
+            )}
           </div>
-          <div>
-            <p className="text-sm font-medium">Photo upload coming soon</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              File upload will be available in a future update. Your application will be processed
-              without a photo for now.
+
+          <div className="flex-1 text-center sm:text-left space-y-1.5">
+            <p className="text-sm font-medium">Select passport-size photo</p>
+            <p className="text-xs text-muted-foreground">
+              JPEG, PNG, or WebP. Recommended square aspect ratio, max 5 MB.
             </p>
+            <div className="flex flex-wrap justify-center sm:justify-start gap-2 pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="xs"
+                onClick={() => photoInputRef.current?.click()}
+              >
+                {photoFile ? "Change Photo" : "Choose File"}
+              </Button>
+              {photoFile && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  className="text-muted-foreground hover:text-destructive"
+                  onClick={() => {
+                    setPhotoFile(null);
+                    setPhotoPreview(null);
+                    setPhotoError(null);
+                    if (photoInputRef.current) photoInputRef.current.value = "";
+                  }}
+                >
+                  Remove
+                </Button>
+              )}
+            </div>
+            {photoError && <p className="text-xs text-destructive mt-1.5">{photoError}</p>}
           </div>
-          <Badge variant="secondary" className="ml-auto shrink-0">
-            Phase 5
-          </Badge>
+
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={handlePhotoChange}
+          />
         </div>
       </section>
 
@@ -348,7 +479,12 @@ export default function ApplicationForm() {
 
       {/* ── Submit ── */}
       <div className="flex flex-col sm:flex-row items-center gap-4 pt-2">
-        <Button type="submit" size="lg" disabled={isSubmitting} className="w-full sm:w-auto gap-2">
+        <Button
+          type="submit"
+          size="lg"
+          disabled={isSubmitting || duplicateConflicts.length > 0}
+          className="w-full sm:w-auto gap-2"
+        >
           {isSubmitting && <Loader2 className="size-4 animate-spin" />}
           {isSubmitting ? "Submitting…" : "Submit Application"}
         </Button>

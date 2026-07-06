@@ -7,6 +7,7 @@ import { LogOut, Menu, Bell, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { clearClientTokens } from "@/lib/auth/client-tokens";
 
 interface AdminTopbarProps {
   onMenuToggle?: () => void;
@@ -27,7 +28,8 @@ export default function AdminTopbar({
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+      clearClientTokens();
     } finally {
       router.push("/login");
       router.refresh();

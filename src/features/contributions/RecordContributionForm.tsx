@@ -26,6 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { getRecentPeriods } from "@/lib/periods";
 import { getPeriodLabel } from "@/types";
+import { getApiErrorMessage } from "@/lib/api/response";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -126,7 +127,7 @@ export default function RecordContributionForm() {
       });
       const result = await res.json();
       if (!res.ok || !result.success) {
-        setServerError(result.error ?? "Failed to record contribution.");
+        setServerError(getApiErrorMessage(result, "Failed to record contribution."));
         return;
       }
       router.push("/dashboard/contributions");

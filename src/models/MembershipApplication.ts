@@ -146,9 +146,23 @@ const membershipApplicationSchema = new Schema<IMembershipApplication>(
 // Primary filter in admin list view: status
 membershipApplicationSchema.index({ status: 1, createdAt: -1 });
 
-// Duplicate-check warning: phone and NID lookups on the public form
-membershipApplicationSchema.index({ phone: 1 });
-membershipApplicationSchema.index({ nid: 1 });
+// One active application per phone / NID (pending or approved only; rejected may re-apply)
+membershipApplicationSchema.index(
+  { phone: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { status: { $in: ["pending", "approved"] } },
+    name: "unique_phone_active_application",
+  },
+);
+membershipApplicationSchema.index(
+  { nid: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { status: { $in: ["pending", "approved"] } },
+    name: "unique_nid_active_application",
+  },
+);
 
 // ─── Model (singleton — safe for Next.js hot-reload) ─────────────────────────
 

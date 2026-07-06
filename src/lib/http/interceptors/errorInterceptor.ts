@@ -1,8 +1,9 @@
 import { AxiosError } from "axios";
 
+import { getApiErrorCode, getApiErrorDetails, getApiErrorMessage } from "@/lib/api/response";
 import type { AppError, AppErrorCode } from "@/types/api";
 
-function getErrorCode(status: number): AppErrorCode {
+function getErrorCodeFromStatus(status: number): AppErrorCode {
   if (status === 401) return "UNAUTHORIZED";
   if (status === 403) return "FORBIDDEN";
   if (status === 404) return "NOT_FOUND";
@@ -29,27 +30,15 @@ export function normalizeError(error: unknown): AppError {
     }
 
     const statusCode = response.status;
-    const errorCode = getErrorCode(statusCode);
-    const responseMessage = (response.data as { message?: string } | undefined)?.message ?? message;
-    const appError: AppError = { message: responseMessage, code: errorCode, statusCode };
+    const responseData = response.data;
+    const responseMessage = getApiErrorMessage(responseData, message);
+    const responseCode = getApiErrorCode(responseData);
+    const errorCode = (responseCode as AppErrorCode | undefined) ?? getErrorCodeFromStatus(statusCode);
+    const details = getApiErrorDetails(responseData);
 
-    if (statusCode === 422) {
-      const data = response.data as Record<string, unknown> | undefined;
-      if (data && typeof data === "object") {
-        const details: Record<string, string[]> = {};
-        for (const [key, value] of Object.entries(data)) {
-          if (
-            key !== "message" &&
-            Array.isArray(value) &&
-            value.every((v) => typeof v === "string")
-          ) {
-            details[key] = value as string[];
-          }
-        }
-        if (Object.keys(details).length > 0) {
-          appError.details = details;
-        }
-      }
+    const appError: AppError = { message: responseMessage, code: errorCode, statusCode };
+    if (details) {
+      appError.details = details;
     }
 
     return appError;

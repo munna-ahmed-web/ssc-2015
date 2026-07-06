@@ -1,35 +1,26 @@
 import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
 
 import { connectDB } from "@/lib/db";
 import { GalleryImage } from "@/models";
 import { requireAdmin } from "@/lib/auth";
 import { uploadToCloudinary } from "@/lib/cloudinary";
+import { apiError, apiSuccess, handleRouteError } from "@/lib/api/response";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-const MAX_SIZE_BYTES = 15 * 1024 * 1024; // 15 MB
-
-// ─── GET /api/admin/gallery-images ─────────────────────────────────────────────
+const MAX_SIZE_BYTES = 15 * 1024 * 1024;
 
 export async function GET() {
   try {
     await requireAdmin();
     await connectDB();
 
-    const images = await GalleryImage.find({})
-      .sort({ order: 1, createdAt: -1 })
-      .lean();
-
-    return NextResponse.json({ success: true, data: images });
+    const images = await GalleryImage.find({}).sort({ order: 1, createdAt: -1 }).lean();
+    return apiSuccess(images);
   } catch (err) {
     if (err instanceof Response) return err;
-    console.error("[GET /api/admin/gallery-images]", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    return handleRouteError(err, "[GET /api/admin/gallery-images]");
   }
 }
-
-// ─── POST /api/admin/gallery-images ────────────────────────────────────────────
-// multipart/form-data: file (required), altText (required), caption (optional), order (optional)
 
 export async function POST(req: NextRequest) {
   try {
@@ -43,25 +34,22 @@ export async function POST(req: NextRequest) {
     const orderRaw = formData.get("order") as string | null;
 
     if (!file) {
-      return NextResponse.json({ success: false, error: "No file uploaded." }, { status: 400 });
+      return apiError("BAD_REQUEST", "No file uploaded.", 400);
     }
     if (!altText) {
-      return NextResponse.json({ success: false, error: "Alt text is required." }, { status: 400 });
+      return apiError("BAD_REQUEST", "Alt text is required.", 400);
     }
     if (!ALLOWED_TYPES.includes(file.type)) {
-      return NextResponse.json(
-        { success: false, error: "Only JPEG, PNG, WebP, and GIF images are accepted." },
-        { status: 415 },
+      return apiError(
+        "UNSUPPORTED_MEDIA_TYPE",
+        "Only JPEG, PNG, WebP, and GIF images are accepted.",
+        415,
       );
     }
     if (file.size > MAX_SIZE_BYTES) {
-      return NextResponse.json(
-        { success: false, error: "Image must be smaller than 15 MB." },
-        { status: 413 },
-      );
+      return apiError("PAYLOAD_TOO_LARGE", "Image must be smaller than 15 MB.", 413);
     }
 
-    // Auto-assign order = last + 1 if not provided
     let order: number;
     if (orderRaw !== null && !isNaN(parseInt(orderRaw))) {
       order = parseInt(orderRaw);
@@ -70,14 +58,13 @@ export async function POST(req: NextRequest) {
       order = (last?.order ?? -1) + 1;
     }
 
-    // Convert File → Buffer for Cloudinary stream upload
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
     const { url, publicId } = await uploadToCloudinary(buffer, {
       folder: "foundation/gallery",
       transformation: [
-        { width: 1200, height: 1200, crop: "limit", quality: "auto:best", fetch_format: "auto" }
+        { width: 1200, height: 1200, crop: "limit", quality: "auto:best", fetch_format: "auto" },
       ],
     });
 
@@ -91,10 +78,9 @@ export async function POST(req: NextRequest) {
       uploadedBy: admin.sub,
     });
 
-    return NextResponse.json({ success: true, data: galleryImage }, { status: 201 });
+    return apiSuccess(galleryImage, { status: 201 });
   } catch (err) {
     if (err instanceof Response) return err;
-    console.error("[POST /api/admin/gallery-images]", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    return handleRouteError(err, "[POST /api/admin/gallery-images]");
   }
 }

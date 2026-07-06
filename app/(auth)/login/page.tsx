@@ -12,6 +12,8 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getApiErrorMessage } from "@/lib/api/response";
+import { setClientTokens } from "@/lib/auth/client-tokens";
 
 // ─── Schema (client-only version — no lowercase/trim transforms needed) ────────
 
@@ -46,13 +48,21 @@ function LoginForm() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(data),
       });
       const result = await res.json();
 
       if (!res.ok || !result.success) {
-        setServerError(result.error ?? "Login failed. Please try again.");
+        setServerError(getApiErrorMessage(result, "Login failed. Please try again."));
         return;
+      }
+
+      if (result.data?.accessToken && result.data?.refreshToken) {
+        setClientTokens(result.data.accessToken, result.data.refreshToken, {
+          expiresIn: result.data.expiresIn,
+          refreshExpiresIn: result.data.refreshExpiresIn,
+        });
       }
 
       router.push(from);

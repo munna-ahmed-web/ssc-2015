@@ -1,13 +1,11 @@
 import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { z } from "zod";
 
 import { connectDB } from "@/lib/db";
 import { MembershipApplication, Member } from "@/models";
 import { requireAdmin } from "@/lib/auth";
-
-// ─── Validation ───────────────────────────────────────────────────────────────
+import { apiError, apiSuccess, handleRouteError } from "@/lib/api/response";
 
 const ApproveSchema = z.object({ action: z.literal("approve") });
 const RejectSchema = z.object({
@@ -20,14 +18,10 @@ const RejectSchema = z.object({
 });
 const ActionSchema = z.discriminatedUnion("action", [ApproveSchema, RejectSchema]);
 
-// ─── Member code generation ───────────────────────────────────────────────────
-
 async function generateMemberCode(): Promise<string> {
   const count = await Member.countDocuments();
   return `MEM-${String(count + 1).padStart(3, "0")}`;
 }
-
-// ─── GET /api/admin/applications/[id] ────────────────────────────────────────
 
 export async function GET(
   _req: NextRequest,
@@ -39,23 +33,20 @@ export async function GET(
 
     const { id } = await params;
     if (!mongoose.isValidObjectId(id)) {
-      return NextResponse.json({ success: false, error: "Invalid ID" }, { status: 400 });
+      return apiError("BAD_REQUEST", "Invalid application ID.", 400);
     }
 
     const application = await MembershipApplication.findById(id).lean();
     if (!application) {
-      return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
+      return apiError("NOT_FOUND", "Application not found.", 404);
     }
 
-    return NextResponse.json({ success: true, data: application });
+    return apiSuccess(application);
   } catch (err) {
     if (err instanceof Response) return err;
-    console.error("[GET /api/admin/applications/:id]", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    return handleRouteError(err, "[GET /api/admin/applications/:id]");
   }
 }
-
-// ─── PATCH /api/admin/applications/[id] ──────────────────────────────────────
 
 export async function PATCH(
   req: NextRequest,
@@ -67,38 +58,35 @@ export async function PATCH(
 
     const { id } = await params;
     if (!mongoose.isValidObjectId(id)) {
-      return NextResponse.json({ success: false, error: "Invalid ID" }, { status: 400 });
+      return apiError("BAD_REQUEST", "Invalid application ID.", 400);
     }
 
     const body = await req.json();
     const parsed = ActionSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, error: "Validation failed", details: parsed.error.flatten().fieldErrors },
-        { status: 422 },
+      return apiError(
+        "VALIDATION_ERROR",
+        "Validation failed.",
+        422,
+        parsed.error.flatten().fieldErrors,
       );
     }
 
     const application = await MembershipApplication.findById(id);
     if (!application) {
-      return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
+      return apiError("NOT_FOUND", "Application not found.", 404);
     }
 
-    // Idempotency guard — only pending applications can be acted on
     if (application.status !== "pending") {
-      return NextResponse.json(
-        {
-          success: false,
-          error: `Application is already ${application.status} and cannot be modified.`,
-        },
-        { status: 409 },
+      return apiError(
+        "CONFLICT",
+        `Application is already ${application.status} and cannot be modified.`,
+        409,
       );
     }
 
     const now = new Date();
     const reviewedBy = new mongoose.Types.ObjectId(admin.sub);
-
-    // ── APPROVE ────────────────────────────────────────────────────────────
 
     if (parsed.data.action === "approve") {
       const memberCode = await generateMemberCode();
@@ -128,14 +116,11 @@ export async function PATCH(
       application.reviewedAt = now;
       await application.save();
 
-      return NextResponse.json({
-        success: true,
-        message: `Application approved. Member ${memberCode} created.`,
-        memberCode,
-      });
+      return apiSuccess(
+        { memberCode, memberId: member._id.toString(), applicationId: application._id.toString() },
+        { message: `Application approved. Member ${memberCode} created.` },
+      );
     }
-
-    // ── REJECT ─────────────────────────────────────────────────────────────
 
     application.status = "rejected";
     application.rejectionReason = parsed.data.rejectionReason;
@@ -143,10 +128,12 @@ export async function PATCH(
     application.reviewedAt = now;
     await application.save();
 
-    return NextResponse.json({ success: true, message: "Application rejected." });
+    return apiSuccess(
+      { applicationId: application._id.toString(), status: "rejected" },
+      { message: "Application rejected." },
+    );
   } catch (err) {
     if (err instanceof Response) return err;
-    console.error("[PATCH /api/admin/applications/:id]", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    return handleRouteError(err, "[PATCH /api/admin/applications/:id]");
   }
 }

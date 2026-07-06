@@ -1,10 +1,15 @@
 import Axios, { AxiosError } from "axios";
 import type { AxiosInstance, InternalAxiosRequestConfig, AxiosHeaders } from "axios";
-import { deleteCookie, getCookie, setCookie } from "cookies-next/client";
 
 import { API_ROOT_URL } from "config";
+import {
+  getClientAccessToken,
+  getClientRefreshToken,
+  setClientTokens,
+  clearClientTokens,
+} from "@/lib/auth/client-tokens";
+import type { ApiResponse } from "@/types";
 
-// Augment Axios config type to carry a retry counter without casting
 declare module "axios" {
   interface InternalAxiosRequestConfig {
     retry?: number;
@@ -16,14 +21,14 @@ interface QueueItem {
   reject: (error: unknown) => void;
 }
 
-interface RefreshResponse {
-  access: string;
-  refresh: string;
+interface RefreshTokenData {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+  refreshExpiresIn: number;
 }
 
-const ACCESS_COOKIE = "alap_access_Token";
-const REFRESH_COOKIE = "alap_refresh_token";
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 1;
 
 let isRefreshing = false;
 let failedQueue: QueueItem[] = [];
@@ -43,11 +48,14 @@ export function authRequestInterceptor(
   config: InternalAxiosRequestConfig,
 ): InternalAxiosRequestConfig {
   const newConfig = { ...config };
-  const token = getCookie(ACCESS_COOKIE);
+  const token = getClientAccessToken();
 
   if (token) {
     (newConfig.headers as AxiosHeaders).set("Authorization", `Bearer ${token}`);
   }
+
+  // Always include cookies for same-origin web sessions (httpOnly tokens).
+  newConfig.withCredentials = true;
 
   if (newConfig.data instanceof FormData) {
     (newConfig.headers as AxiosHeaders).delete("Content-Type");
@@ -90,33 +98,36 @@ export async function authResponseInterceptor(
   originalRequest.retry += 1;
   isRefreshing = true;
 
-  const refreshToken = getCookie(REFRESH_COOKIE);
-  if (!refreshToken) {
-    deleteCookie(ACCESS_COOKIE);
-    window.location.replace("/auth/sign-in");
-    isRefreshing = false;
-    throw error;
-  }
+  const clientRefresh = getClientRefreshToken();
 
   try {
-    // Plain instance with no interceptors — prevents recursive 401 loops on the refresh call
-    const refreshAxios = Axios.create({ baseURL: API_ROOT_URL });
-    const response = await refreshAxios.post<RefreshResponse>("/api/auth/token/refresh/", {
-      refresh: refreshToken,
+    const refreshAxios = Axios.create({
+      baseURL: API_ROOT_URL,
+      withCredentials: true,
+      headers: { "Content-Type": "application/json" },
     });
-    const { access, refresh } = response.data;
 
-    setCookie(ACCESS_COOKIE, access, { maxAge: 60 * 60 * 24 * 7 });
-    setCookie(REFRESH_COOKIE, refresh, { maxAge: 60 * 60 * 24 * 90 });
+    const response = await refreshAxios.post<ApiResponse<RefreshTokenData>>(
+      "/api/auth/refresh",
+      clientRefresh ? { refreshToken: clientRefresh } : {},
+    );
 
-    processQueue(null, access);
-    (originalRequest.headers as AxiosHeaders).set("Authorization", `Bearer ${access}`);
+    if (!response.data.success) {
+      throw new Error("Token refresh failed");
+    }
+
+    const { accessToken, refreshToken, expiresIn, refreshExpiresIn } = response.data.data;
+    setClientTokens(accessToken, refreshToken, { expiresIn, refreshExpiresIn });
+
+    processQueue(null, accessToken);
+    (originalRequest.headers as AxiosHeaders).set("Authorization", `Bearer ${accessToken}`);
     return instance(originalRequest);
   } catch (refreshError) {
     processQueue(refreshError, null);
-    deleteCookie(ACCESS_COOKIE);
-    deleteCookie(REFRESH_COOKIE);
-    window.location.replace("/en/auth/sign-in");
+    clearClientTokens();
+    if (typeof window !== "undefined") {
+      window.location.replace("/login");
+    }
     throw refreshError;
   } finally {
     isRefreshing = false;
