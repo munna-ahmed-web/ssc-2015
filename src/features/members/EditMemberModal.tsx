@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-misused-promises */
 "use client";
 
 import { useState } from "react";
@@ -25,7 +26,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { IMember } from "@/models";
+
+import { useUpdateMember } from "./hook/memberHooks";
+import type { SerializedMember } from "./types/types";
 
 // ─── Validation Schema ────────────────────────────────────────────────────────
 
@@ -46,13 +49,14 @@ const EditMemberSchema = z.object({
 type EditMemberFormData = z.infer<typeof EditMemberSchema>;
 
 interface EditMemberModalProps {
-  member: IMember;
+  member: SerializedMember;
   open: boolean;
   onClose: () => void;
 }
 
 export default function EditMemberModal({ member, open, onClose }: EditMemberModalProps) {
   const router = useRouter();
+  const { mutateAsync: updateMember, isPending: updating } = useUpdateMember();
   const [error, setError] = useState<string | null>(null);
 
   // Formatted date string for input: YYYY-MM-DD
@@ -88,31 +92,30 @@ export default function EditMemberModal({ member, open, onClose }: EditMemberMod
   });
 
   const contributionTypeValue = watch("contributionType");
+  const submitting = isSubmitting || updating;
 
   const onSubmit = async (data: EditMemberFormData) => {
     setError(null);
     try {
-      const res = await fetch(`/api/admin/members/${member._id.toString()}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+      await updateMember({
+        id: member._id.toString(),
+        data: data as Partial<SerializedMember>,
       });
-      const resData = await res.json();
-
-      if (!res.ok || !resData.success) {
-        setError(resData.error ?? "Failed to update profile.");
-        return;
-      }
 
       onClose();
       router.refresh();
-    } catch {
-      setError("Network error. Please try again.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Network error. Please try again.");
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Member Profile</DialogTitle>
@@ -150,25 +153,19 @@ export default function EditMemberModal({ member, open, onClose }: EditMemberMod
               <div className="space-y-1.5">
                 <Label htmlFor="phone">Phone Number *</Label>
                 <Input id="phone" {...register("phone")} />
-                {errors.phone && (
-                  <p className="text-xs text-destructive">{errors.phone.message}</p>
-                )}
+                {errors.phone && <p className="text-xs text-destructive">{errors.phone.message}</p>}
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="email">Email Address</Label>
                 <Input id="email" type="email" {...register("email")} />
-                {errors.email && (
-                  <p className="text-xs text-destructive">{errors.email.message}</p>
-                )}
+                {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="nid">National ID (NID) *</Label>
                 <Input id="nid" {...register("nid")} />
-                {errors.nid && (
-                  <p className="text-xs text-destructive">{errors.nid.message}</p>
-                )}
+                {errors.nid && <p className="text-xs text-destructive">{errors.nid.message}</p>}
               </div>
 
               <div className="space-y-1.5">
@@ -224,11 +221,7 @@ export default function EditMemberModal({ member, open, onClose }: EditMemberMod
 
               <div className="space-y-1.5">
                 <Label htmlFor="contributionAmount">Amount (BDT) *</Label>
-                <Input
-                  id="contributionAmount"
-                  type="number"
-                  {...register("contributionAmount")}
-                />
+                <Input id="contributionAmount" type="number" {...register("contributionAmount")} />
                 {errors.contributionAmount && (
                   <p className="text-xs text-destructive">{errors.contributionAmount.message}</p>
                 )}
@@ -245,11 +238,11 @@ export default function EditMemberModal({ member, open, onClose }: EditMemberMod
           </div>
 
           <DialogFooter className="gap-2 pt-4 border-t border-border">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+            <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="gap-2">
-              {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+            <Button type="submit" disabled={submitting} className="gap-2">
+              {submitting && <Loader2 className="size-4 animate-spin" />}
               Save Changes
             </Button>
           </DialogFooter>

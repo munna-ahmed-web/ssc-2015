@@ -1,27 +1,28 @@
-import { notFound } from "next/navigation";
+"use client";
+
+import { useParams } from "next/navigation";
 import Link from "next/link";
-import mongoose from "mongoose";
-import { ArrowLeft, User, Phone, Mail, MapPin, Calendar, Briefcase, CreditCard, Banknote } from "lucide-react";
+import {
+  ArrowLeft,
+  User,
+  Phone,
+  Mail,
+  MapPin,
+  Calendar,
+  Briefcase,
+  CreditCard,
+  Banknote,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { connectDB } from "@/lib/db";
-import { MembershipApplication } from "@/models";
-import type { IMembershipApplication, ApplicationStatus } from "@/models";
 import ApplicationStatusBadge from "@/features/applications/ApplicationStatusBadge";
 import ApplicationActions from "@/features/applications/ApplicationActions";
-
-// ─── Data fetch ───────────────────────────────────────────────────────────────
-
-async function getApplication(id: string): Promise<IMembershipApplication | null> {
-  if (!mongoose.isValidObjectId(id)) return null;
-  await connectDB();
-  const app = await MembershipApplication.findById(id).lean();
-  return app as unknown as IMembershipApplication | null;
-}
-
-// ─── Info row helper ──────────────────────────────────────────────────────────
+import { useFetchApplicationById } from "@/features/applications/hook/applicationHooks";
 
 function InfoRow({
   icon: Icon,
@@ -45,27 +46,32 @@ function InfoRow({
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+export default function ApplicationDetailPage() {
+  const params = useParams();
+  const id = params?.id as string;
 
-interface PageProps {
-  params: Promise<{ id: string }>;
-}
+  const { data: app, isLoading, isError, error } = useFetchApplicationById(id);
 
-export async function generateMetadata({ params }: PageProps) {
-  const { id } = await params;
-  const app = await getApplication(id);
-  return {
-    title: app ? `${app.fullName} — Application` : "Application Not Found",
-  };
-}
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 space-y-3">
+        <Loader2 className="size-8 text-primary animate-spin" />
+        <p className="text-sm text-muted-foreground">Loading application details…</p>
+      </div>
+    );
+  }
 
-export default async function ApplicationDetailPage({ params }: PageProps) {
-  const { id } = await params;
-  const app = await getApplication(id);
-  if (!app) notFound();
-
-  const appId = (app._id as { toString(): string }).toString();
-  const status = app.status as ApplicationStatus;
+  if (isError || !app) {
+    return (
+      <div className="max-w-md mx-auto mt-10 rounded-xl border border-destructive/20 bg-destructive/10 px-5 py-6 text-center">
+        <AlertCircle className="size-8 mx-auto text-destructive mb-2" />
+        <p className="text-sm font-medium text-destructive">Failed to load application</p>
+        <p className="text-xs text-destructive/80 mt-1">
+          {error instanceof Error ? error.message : "Application not found."}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -79,7 +85,7 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
         </Button>
         <Separator orientation="vertical" className="h-5" />
         <h2 className="text-lg">{app.fullName}</h2>
-        <ApplicationStatusBadge status={status} />
+        <ApplicationStatusBadge status={app.status} />
       </div>
 
       {/* Action panel */}
@@ -90,7 +96,7 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ApplicationActions applicationId={appId} status={status} />
+          <ApplicationActions applicationId={app._id} status={app.status} />
           {app.reviewedAt && (
             <p className="text-xs text-muted-foreground mt-3">
               Reviewed on {new Date(app.reviewedAt).toLocaleString("en-BD")}
@@ -105,9 +111,7 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
           {app.memberId && (
             <div className="mt-3">
               <Button asChild size="sm" variant="outline">
-                <Link href={`/dashboard/members/${app.memberId.toString()}`}>
-                  View Member Record
-                </Link>
+                <Link href={`/dashboard/members/${app.memberId}`}>View Member Record</Link>
               </Button>
             </div>
           )}
@@ -131,9 +135,11 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
             <InfoRow
               icon={Calendar}
               label="Date of Birth"
-              value={app.dateOfBirth
-                ? new Date(app.dateOfBirth).toLocaleDateString("en-BD", { dateStyle: "long" })
-                : undefined}
+              value={
+                app.dateOfBirth
+                  ? new Date(app.dateOfBirth).toLocaleDateString("en-BD", { dateStyle: "long" })
+                  : undefined
+              }
             />
             <InfoRow icon={Briefcase} label="Occupation" value={app.occupation} />
           </CardContent>
@@ -150,11 +156,7 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
               <CardContent className="flex flex-col items-center py-4">
                 <div className="size-32 rounded-xl overflow-hidden border border-border bg-muted flex items-center justify-center">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={app.photoUrl}
-                    alt={app.fullName}
-                    className="size-full object-cover"
-                  />
+                  <img src={app.photoUrl} alt={app.fullName} className="size-full object-cover" />
                 </div>
               </CardContent>
             </Card>
@@ -178,11 +180,7 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <InfoRow
-                icon={Banknote}
-                label="Type"
-                value={app.requestedContributionType}
-              />
+              <InfoRow icon={Banknote} label="Type" value={app.requestedContributionType} />
               <InfoRow
                 icon={Banknote}
                 label="Requested Amount"
@@ -201,10 +199,7 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Submitted</span>
                 <span>
-                  {new Date((app as unknown as { createdAt: Date }).createdAt).toLocaleDateString(
-                    "en-BD",
-                    { dateStyle: "medium" }
-                  )}
+                  {new Date(app.createdAt).toLocaleDateString("en-BD", { dateStyle: "medium" })}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">

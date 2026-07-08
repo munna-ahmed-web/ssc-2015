@@ -1,11 +1,15 @@
+/* eslint-disable no-alert */
+/* eslint-disable @typescript-eslint/no-misused-promises */
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Loader2, PlayCircle, StopCircle } from "lucide-react";
-import { getApiErrorMessage } from "@/lib/api/response";
+
 import { Button } from "@/components/ui/button";
 import type { MemberStatus } from "@/models";
+
+import { useUpdateMember } from "./hook/memberHooks";
 
 interface MemberStatusActionsProps {
   memberId: string;
@@ -14,7 +18,7 @@ interface MemberStatusActionsProps {
 
 export default function MemberStatusActions({ memberId, currentStatus }: MemberStatusActionsProps) {
   const router = useRouter();
-  const [updating, setUpdating] = useState(false);
+  const { mutateAsync: updateMember, isPending: updating } = useUpdateMember();
   const [error, setError] = useState<string | null>(null);
 
   const handleStatusChange = async (newStatus: MemberStatus) => {
@@ -27,26 +31,12 @@ export default function MemberStatusActions({ memberId, currentStatus }: MemberS
     }
 
     setError(null);
-    setUpdating(true);
 
     try {
-      const res = await fetch(`/api/admin/members/${memberId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        setError(getApiErrorMessage(data, "Failed to update member status."));
-        return;
-      }
-
+      await updateMember({ id: memberId, data: { status: newStatus } });
       router.refresh();
-    } catch {
-      setError("Network error. Please try again.");
-    } finally {
-      setUpdating(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Network error. Please try again.");
     }
   };
 

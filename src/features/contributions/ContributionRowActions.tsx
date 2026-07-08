@@ -4,12 +4,12 @@ import { useState } from "react";
 import { Undo2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import type { IContribution } from "@/models";
 
 import ReversalModal from "./ReversalModal";
+import type { SerializedContribution } from "./types/types";
 
 interface ContributionRowActionsProps {
-  contribution: IContribution & { _id: { toString(): string }; createdAt: Date };
+  contribution: SerializedContribution;
 }
 
 export function ContributionRowActions({ contribution }: ContributionRowActionsProps) {
@@ -30,7 +30,7 @@ export function ContributionRowActions({ contribution }: ContributionRowActionsP
         Reverse
       </Button>
       <ReversalModal
-        contributionId={contribution._id.toString()}
+        contributionId={contribution._id}
         memberName={contribution.memberName}
         periodLabel={contribution.periodLabel}
         amount={contribution.amount}

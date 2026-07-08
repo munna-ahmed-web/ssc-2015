@@ -1,4 +1,7 @@
 /* eslint-disable no-nested-ternary */
+"use client";
+
+import { useState, useEffect } from "react";
 import {
   ClipboardList,
   Users,
@@ -7,6 +10,8 @@ import {
   TrendingUp,
   ArrowRight,
   Calendar,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -14,7 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { getDashboardStats } from "@/lib/dashboard";
+import { useFetchDashboardStats } from "@/features/dashboard/hook/dashboardHooks";
 
 // ─── Stat card ────────────────────────────────────────────────────────────────
 
@@ -102,16 +107,47 @@ function QuickAction({
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export const metadata = {
-  title: "Dashboard — SSC-2015 Foundation Admin",
-};
+export default function DashboardPage() {
+  const { data: stats, isLoading, isError, error } = useFetchDashboardStats();
+  const [now, setNow] = useState<Date | null>(null);
 
-export default async function DashboardPage() {
-  const stats = await getDashboardStats();
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setNow(new Date());
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
 
-  const now = new Date();
-  const greeting =
-    now.getHours() < 12 ? "Good morning" : now.getHours() < 17 ? "Good afternoon" : "Good evening";
+  const greeting = !now
+    ? "Good day"
+    : now.getHours() < 12
+      ? "Good morning"
+      : now.getHours() < 17
+        ? "Good afternoon"
+        : "Good evening";
+
+  const dateStr = now ? now.toLocaleDateString("en-BD", { dateStyle: "full" }) : "Loading date…";
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 space-y-3">
+        <Loader2 className="size-8 text-primary animate-spin" />
+        <p className="text-sm text-muted-foreground">Loading dashboard statistics…</p>
+      </div>
+    );
+  }
+
+  if (isError || !stats) {
+    return (
+      <div className="max-w-md mx-auto mt-10 rounded-xl border border-destructive/20 bg-destructive/10 px-5 py-6 text-center">
+        <AlertCircle className="size-8 mx-auto text-destructive mb-2" />
+        <p className="text-sm font-medium text-destructive">Failed to load stats</p>
+        <p className="text-xs text-destructive/80 mt-1">
+          {error instanceof Error ? error.message : "An error occurred."}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -126,7 +162,7 @@ export default async function DashboardPage() {
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
           <Calendar className="size-3.5" />
-          <span>{now.toLocaleDateString("en-BD", { dateStyle: "full" })}</span>
+          <span>{dateStr}</span>
         </div>
       </div>
 

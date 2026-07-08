@@ -1,73 +1,56 @@
-import { notFound } from "next/navigation";
-import mongoose from "mongoose";
+"use client";
 
-import { connectDB } from "@/lib/db";
-import { Member, Contribution } from "@/models";
-import type { IMember, IContribution } from "@/models";
+import { useParams } from "next/navigation";
+import { Loader2, AlertCircle } from "lucide-react";
+
 import MemberDetailClient from "@/features/members/MemberDetailClient";
+import {
+  useFetchMemberById,
+  useFetchMemberContributions,
+} from "@/features/members/hook/memberHooks";
 
-async function getMemberWithHistory(id: string) {
-  if (!mongoose.isValidObjectId(id)) return null;
-  await connectDB();
+export default function MemberDetailPage() {
+  const params = useParams();
+  const id = params?.id as string;
 
-  const [member, contributions] = await Promise.all([
-    Member.findById(id).lean(),
-    Contribution.find({ memberId: new mongoose.Types.ObjectId(id) })
-      .sort({ paidAt: -1 })
-      .lean(),
-  ]);
+  const {
+    data: member,
+    isLoading: isMemberLoading,
+    isError: isMemberError,
+    error: memberError,
+  } = useFetchMemberById(id);
 
-  if (!member) return null;
+  const {
+    data: contributions,
+    isLoading: isContributionsLoading,
+    isError: isContributionsError,
+    error: contributionsError,
+  } = useFetchMemberContributions(id);
 
-  // Serialize member fields
-  const serializedMember = {
-    ...member,
-    _id: member._id.toString(),
-    applicationId: member.applicationId.toString(),
-    approvedBy: member.approvedBy.toString(),
-    dateOfBirth: new Date(member.dateOfBirth).toISOString(),
-    joinedAt: member.joinedAt.toISOString(),
-    suspendedAt: member.suspendedAt?.toISOString(),
-    exitedAt: member.exitedAt?.toISOString(),
-    createdAt: member.createdAt.toISOString(),
-    updatedAt: member.updatedAt.toISOString(),
-  };
+  const loading = isMemberLoading || isContributionsLoading;
+  const isError = isMemberError || isContributionsError;
+  const error = memberError || contributionsError;
 
-  // Serialize contributions list
-  const serializedContributions = contributions.map((c) => ({
-    ...c,
-    _id: c._id.toString(),
-    memberId: c.memberId.toString(),
-    reversalOf: c.reversalOf?.toString(),
-    recordedBy: c.recordedBy.toString(),
-    paidAt: c.paidAt.toISOString(),
-    createdAt: c.createdAt.toISOString(),
-    updatedAt: c.updatedAt.toISOString(),
-  }));
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 space-y-3">
+        <Loader2 className="size-8 text-primary animate-spin" />
+        <p className="text-sm text-muted-foreground">Loading member record…</p>
+      </div>
+    );
+  }
 
-  return {
-    member: serializedMember as unknown as IMember,
-    contributions: serializedContributions as unknown as IContribution[],
-  };
-}
+  if (isError || !member) {
+    return (
+      <div className="max-w-md mx-auto mt-10 rounded-xl border border-destructive/20 bg-destructive/10 px-5 py-6 text-center">
+        <AlertCircle className="size-8 mx-auto text-destructive mb-2" />
+        <p className="text-sm font-medium text-destructive">Failed to load member record</p>
+        <p className="text-xs text-destructive/80 mt-1">
+          {error instanceof Error ? error.message : "Record not found or network error occurred."}
+        </p>
+      </div>
+    );
+  }
 
-interface PageProps {
-  params: Promise<{ id: string }>;
-}
-
-export async function generateMetadata({ params }: PageProps) {
-  const { id } = await params;
-  const result = await getMemberWithHistory(id);
-  return {
-    title: result ? `${result.member.fullName} — Member Record` : "Member Not Found",
-  };
-}
-
-export default async function MemberDetailPage({ params }: PageProps) {
-  const { id } = await params;
-  const result = await getMemberWithHistory(id);
-
-  if (!result) notFound();
-
-  return <MemberDetailClient member={result.member} contributions={result.contributions} />;
+  return <MemberDetailClient member={member} contributions={contributions ?? []} />;
 }

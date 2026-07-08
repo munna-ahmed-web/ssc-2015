@@ -11,13 +11,19 @@ export async function GET() {
 
   try {
     await connectDB();
-    const user = await User.findById(session.sub).select("name email role").lean();
+    const user = await User.findById(session.sub).select("name email role createdAt").lean();
     if (!user) {
       return apiError("NOT_FOUND", "User not found.", 404);
     }
 
     return apiSuccess({
-      user: { id: user._id.toString(), name: user.name, email: user.email, role: user.role },
+      user: {
+        id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt,
+      },
     });
   } catch (err) {
     return handleRouteError(err, "[GET /api/auth/me]");

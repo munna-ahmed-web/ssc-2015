@@ -3,16 +3,12 @@
  * Supports web (httpOnly cookies) and mobile/API (Authorization: Bearer).
  */
 
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 
 import { verifyAccessToken, type TokenPayload } from "@/lib/jwt";
 import { apiUnauthorized } from "@/lib/api/response";
 
-import {
-  COOKIE_ACCESS,
-  COOKIE_REFRESH,
-  parseBearerToken,
-} from "./auth/constants";
+import { parseBearerToken } from "./auth/constants";
 
 export {
   COOKIE_ACCESS,
@@ -30,11 +26,7 @@ export type { AuthTokens } from "./auth/constants";
 
 async function resolveAccessToken(): Promise<string | null> {
   const headerStore = await headers();
-  const bearer = parseBearerToken(headerStore.get("authorization"));
-  if (bearer) return bearer;
-
-  const store = await cookies();
-  return store.get(COOKIE_ACCESS)?.value ?? null;
+  return parseBearerToken(headerStore.get("authorization"));
 }
 
 /**

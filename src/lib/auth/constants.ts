@@ -1,8 +1,6 @@
-import type { NextRequest } from "next/server";
-import type { NextResponse } from "next/server";
-
-export const COOKIE_ACCESS = "access_token";
-export const COOKIE_REFRESH = "refresh_token";
+import type { NextRequest, NextResponse } from "next/server";
+export const COOKIE_ACCESS = "client_access_token";
+export const COOKIE_REFRESH = "client_refresh_token";
 
 /** Access token lifetime in seconds (15 minutes). */
 export const ACCESS_MAX_AGE = 15 * 60;
@@ -32,26 +30,13 @@ export function getAccessTokenFromRequest(req: NextRequest): string | undefined 
 }
 
 /** Attach httpOnly auth cookies to a response (web clients). */
-export function setAuthCookies(res: NextResponse, tokens: AuthTokens): void {
-  const isProd = process.env.NODE_ENV === "production";
-  const secure = isProd ? "Secure;" : "";
-  const base = `httpOnly; SameSite=Strict; ${secure}`;
-
-  res.headers.append(
-    "Set-Cookie",
-    `${COOKIE_ACCESS}=${tokens.accessToken}; Max-Age=${tokens.expiresIn}; Path=/; ${base}`,
-  );
-  res.headers.append(
-    "Set-Cookie",
-    `${COOKIE_REFRESH}=${tokens.refreshToken}; Max-Age=${tokens.refreshExpiresIn}; Path=/; ${base}`,
-  );
+export function setAuthCookies(_res: NextResponse, _tokens: AuthTokens): void {
+  // Disabled: Relying entirely on client-managed Bearer headers
 }
 
 /** Clear httpOnly auth cookies. */
-export function clearAuthCookies(res: NextResponse): void {
-  const cleared = "Max-Age=0; httpOnly; SameSite=Strict; Path=/";
-  res.headers.append("Set-Cookie", `${COOKIE_ACCESS}=; ${cleared}`);
-  res.headers.append("Set-Cookie", `${COOKIE_REFRESH}=; ${cleared}`);
+export function clearAuthCookies(_res: NextResponse): void {
+  // Disabled: Relying entirely on client-managed Bearer headers
 }
 
 export function buildAuthTokens(accessToken: string, refreshToken: string): AuthTokens {

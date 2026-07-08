@@ -1,13 +1,15 @@
+/* eslint-disable @typescript-eslint/no-unnecessary-condition */
+/* eslint-disable no-nested-ternary */
+"use client";
+
 import Link from "next/link";
-import { Users } from "lucide-react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Users, Loader2, AlertCircle } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import MemberStatusBadge from "@/features/members/MemberStatusBadge";
-import { connectDB } from "@/lib/db";
-import { Member } from "@/models";
-import type { MemberStatus, IMember } from "@/models";
-
-export const metadata = { title: "Members — SSC-2015 Foundation Admin" };
+import { useFetchMembers } from "@/features/members/hook/memberHooks";
 
 const STATUS_TABS = [
   { label: "All", value: "all" },
@@ -16,46 +18,35 @@ const STATUS_TABS = [
   { label: "Exited", value: "exited" },
 ];
 
-async function getMembers(status: string, search: string, page: number) {
-  await connectDB();
-  const limit = 20;
-  const filter: Record<string, unknown> = {};
+export default function MembersPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
-  if (status !== "all") {
-    filter.status = status;
-  }
-  if (search) {
-    filter.$or = [
-      { fullName: { $regex: search, $options: "i" } },
-      { phone: { $regex: search, $options: "i" } },
-      { memberCode: { $regex: search, $options: "i" } },
-    ];
-  }
+  const status = searchParams.get("status") ?? "all";
+  const search = searchParams.get("search") ?? "";
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
 
-  const [members, total] = await Promise.all([
-    Member.find(filter)
-      .sort({ joinedAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .lean(),
-    Member.countDocuments(filter),
-  ]);
+  const { data, isLoading, isError, error } = useFetchMembers({
+    status,
+    search,
+    page,
+    limit: 20,
+  });
 
-  return { members, total, limit };
-}
+  const handleSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const searchVal = (formData.get("search") as string).trim() ?? "";
 
-interface PageProps {
-  searchParams: Promise<{ status?: string; search?: string; page?: string }>;
-}
-
-export default async function MembersPage({ searchParams }: PageProps) {
-  const sp = await searchParams;
-  const status = sp.status ?? "all";
-  const search = sp.search ?? "";
-  const page = Math.max(1, parseInt(sp.page ?? "1"));
-
-  const { members, total, limit } = await getMembers(status, search, page);
-  const totalPages = Math.ceil(total / limit);
+    const params = new URLSearchParams(searchParams.toString());
+    if (searchVal) {
+      params.set("search", searchVal);
+    } else {
+      params.delete("search");
+    }
+    params.set("page", "1"); // Reset page to 1 on new search
+    router.push(`/dashboard/members?${params.toString()}`);
+  };
 
   return (
     <div className="space-y-6">
@@ -69,7 +60,8 @@ export default async function MembersPage({ searchParams }: PageProps) {
         </div>
         <Badge variant="secondary" className="self-start sm:self-center gap-1.5">
           <Users className="size-3" />
-          {total} member{total !== 1 ? "s" : ""}
+          {isLoading ? <Loader2 className="size-3 animate-spin" /> : (data?.total ?? 0)} member
+          {(data?.total ?? 0) !== 1 ? "s" : ""}
         </Badge>
       </div>
 
@@ -91,11 +83,11 @@ export default async function MembersPage({ searchParams }: PageProps) {
       </div>
 
       {/* Search */}
-      <form method="GET" className="flex gap-2 max-w-md">
-        <input type="hidden" name="status" value={status} />
+      <form onSubmit={handleSearchSubmit} className="flex gap-2 max-w-md">
         <input
           id="search-members"
           name="search"
+          key={search} // Force re-render when search query changes externally (e.g. on Clear)
           defaultValue={search}
           placeholder="Search by name, phone, or member code…"
           className="flex-1 h-9 rounded-lg border border-input bg-card px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
@@ -110,96 +102,118 @@ export default async function MembersPage({ searchParams }: PageProps) {
         )}
       </form>
 
-      {/* Table */}
-      <div className="rounded-xl border border-border overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50">
-              <tr>
-                {["Code", "Name", "Phone", "Frequency", "Premium Amount", "Status", "Joined At", ""].map(
-                  (h) => (
-                    <th
-                      key={h}
-                      scope="col"
-                      className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-                    >
-                      {h}
-                    </th>
-                  ),
-                )}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border bg-card">
-              {members.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
-                    <Users className="size-8 mx-auto mb-2 opacity-30" />
-                    No members found
-                  </td>
-                </tr>
-              ) : (
-                members.map((member) => {
-                  const m = member as unknown as IMember & { _id: { toString(): string }; joinedAt: Date };
-                  return (
-                    <tr key={m._id.toString()} className="hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 font-semibold text-primary">{m.memberCode}</td>
-                      <td className="px-4 py-3 font-medium">{m.fullName}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{m.phone}</td>
-                      <td className="px-4 py-3 capitalize">
-                        <Badge variant="outline" className="text-xs">
-                          {m.contributionType}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3">৳{m.contributionAmount.toLocaleString()}</td>
-                      <td className="px-4 py-3">
-                        <MemberStatusBadge status={m.status as MemberStatus} />
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground text-xs">
-                        {new Date(m.joinedAt).toLocaleDateString("en-BD")}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Button asChild size="xs" variant="outline">
-                          <Link href={`/dashboard/members/${m._id.toString()}`}>
-                            Manage
-                          </Link>
-                        </Button>
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center py-20 space-y-3">
+          <Loader2 className="size-8 text-primary animate-spin" />
+          <p className="text-sm text-muted-foreground">Loading members…</p>
+        </div>
+      ) : isError ? (
+        <div className="rounded-xl border border-destructive/20 bg-destructive/10 px-5 py-6 text-center">
+          <AlertCircle className="size-8 mx-auto text-destructive mb-2" />
+          <p className="text-sm font-medium text-destructive">Failed to load members</p>
+          <p className="text-xs text-destructive/80 mt-1">
+            {error instanceof Error ? error.message : "An error occurred."}
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Table */}
+          <div className="rounded-xl border border-border overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50">
+                  <tr>
+                    {[
+                      "Code",
+                      "Name",
+                      "Phone",
+                      "Frequency",
+                      "Premium Amount",
+                      "Status",
+                      "Joined At",
+                      "",
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        scope="col"
+                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border bg-card">
+                  {data?.members.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
+                        <Users className="size-8 mx-auto mb-2 opacity-30" />
+                        No members found
                       </td>
                     </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span>
-            Showing {(page - 1) * limit + 1}–{Math.min(page * limit, total)} of {total}
-          </span>
-          <div className="flex gap-2">
-            {page > 1 && (
-              <Button asChild size="sm" variant="outline">
-                <Link
-                  href={`/dashboard/members?status=${status}&search=${search}&page=${page - 1}`}
-                >
-                  Previous
-                </Link>
-              </Button>
-            )}
-            {page < totalPages && (
-              <Button asChild size="sm" variant="outline">
-                <Link
-                  href={`/dashboard/members?status=${status}&search=${search}&page=${page + 1}`}
-                >
-                  Next
-                </Link>
-              </Button>
-            )}
+                  ) : (
+                    data?.members.map((m) => {
+                      return (
+                        <tr key={m._id} className="hover:bg-muted/30 transition-colors">
+                          <td className="px-4 py-3 font-semibold text-primary">{m.memberCode}</td>
+                          <td className="px-4 py-3 font-medium">{m.fullName}</td>
+                          <td className="px-4 py-3 text-muted-foreground">{m.phone}</td>
+                          <td className="px-4 py-3 capitalize">
+                            <Badge variant="outline" className="text-xs">
+                              {m.contributionType}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3">৳{m.contributionAmount.toLocaleString()}</td>
+                          <td className="px-4 py-3">
+                            <MemberStatusBadge status={m.status} />
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground text-xs">
+                            {new Date(m.joinedAt).toLocaleDateString("en-BD")}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Button asChild size="xs" variant="outline">
+                              <Link href={`/dashboard/members/${m._id}`}>Manage</Link>
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+
+          {/* Pagination */}
+          {(data?.totalPages ?? 0) > 1 && (
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <span>
+                Showing {(page - 1) * (data?.limit ?? 20) + 1}–
+                {Math.min(page * (data?.limit ?? 20), data?.total ?? 0)} of {data?.total ?? 0}
+              </span>
+              <div className="flex gap-2">
+                {page > 1 && (
+                  <Button asChild size="sm" variant="outline">
+                    <Link
+                      href={`/dashboard/members?status=${status}&search=${search}&page=${page - 1}`}
+                    >
+                      Previous
+                    </Link>
+                  </Button>
+                )}
+                {page < (data?.totalPages ?? 1) && (
+                  <Button asChild size="sm" variant="outline">
+                    <Link
+                      href={`/dashboard/members?status=${status}&search=${search}&page=${page + 1}`}
+                    >
+                      Next
+                    </Link>
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

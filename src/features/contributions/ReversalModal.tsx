@@ -15,7 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatPeriodLabel } from "@/lib/periods";
-import { getApiErrorMessage } from "@/lib/api/response";
+
+import { useReverseContribution } from "./hook/contributionHooks";
 
 interface ReversalModalProps {
   contributionId: string;
@@ -35,9 +36,9 @@ export default function ReversalModal({
   onClose,
 }: ReversalModalProps) {
   const router = useRouter();
+  const { mutateAsync: reverseContribution, isPending: submitting } = useReverseContribution();
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
     if (notes.trim().length < 5) {
@@ -45,24 +46,12 @@ export default function ReversalModal({
       return;
     }
     setError(null);
-    setSubmitting(true);
     try {
-      const res = await fetch(`/api/admin/contributions/${contributionId}/reverse`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notes: notes.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        setError(getApiErrorMessage(data, "Reversal failed."));
-        return;
-      }
+      await reverseContribution({ id: contributionId, notes: notes.trim() });
       onClose();
       router.refresh();
-    } catch {
-      setError("Network error. Please try again.");
-    } finally {
-      setSubmitting(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Network error. Please try again.");
     }
   };
 

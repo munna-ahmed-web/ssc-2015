@@ -30,18 +30,34 @@ export async function GET(req: NextRequest) {
       filter.isReversal = false;
     }
 
-    const [contributions, total] = await Promise.all([
+    const [contributions, total, periodTotal] = await Promise.all([
       Contribution.find(filter)
         .sort({ paidAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
       Contribution.countDocuments(filter),
+      periodLabel
+        ? Contribution.aggregate([
+            { $match: { periodLabel } },
+            {
+              $group: {
+                _id: null,
+                net: {
+                  $sum: { $cond: ["$isReversal", { $multiply: ["$amount", -1] }, "$amount"] },
+                },
+              },
+            },
+          ])
+        : Promise.resolve([]),
     ]);
+
+    const netCollected = periodTotal[0]?.net ?? 0;
 
     return apiSuccess(contributions, {
       meta: {
         pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+        netCollected,
       },
     });
   } catch (err) {
@@ -54,10 +70,7 @@ const RecordSchema = z.object({
   memberId: z.string().min(1, "Member is required"),
   periodLabel: z
     .string()
-    .regex(
-      /^\d{4}-(0[1-9]|1[0-2])$|^\d{4}-W(0[1-9]|[1-4]\d|5[0-3])$/,
-      "Invalid period label",
-    ),
+    .regex(/^\d{4}-(0[1-9]|1[0-2])$|^\d{4}-W(0[1-9]|[1-4]\d|5[0-3])$/, "Invalid period label"),
   paidAt: z.string().optional(),
   notes: z.string().max(500).optional(),
 });

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Loader2 } from "lucide-react";
+
 import {
   Dialog,
   DialogContent,
@@ -13,7 +14,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { getApiErrorMessage } from "@/lib/api/response";
+
+import { useUpdateApplicationAction } from "./hook/applicationHooks";
 
 interface RejectModalProps {
   applicationId: string;
@@ -23,9 +25,9 @@ interface RejectModalProps {
 
 export default function RejectModal({ applicationId, open, onClose }: RejectModalProps) {
   const router = useRouter();
+  const { mutateAsync: updateApplication, isPending: submitting } = useUpdateApplicationAction();
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
     if (reason.trim().length < 5) {
@@ -33,29 +35,25 @@ export default function RejectModal({ applicationId, open, onClose }: RejectModa
       return;
     }
     setError(null);
-    setSubmitting(true);
     try {
-      const res = await fetch(`/api/admin/applications/${applicationId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "reject", rejectionReason: reason.trim() }),
+      await updateApplication({
+        id: applicationId,
+        data: { action: "reject", rejectionReason: reason.trim() },
       });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        setError(getApiErrorMessage(data, "Failed to reject application."));
-        return;
-      }
       onClose();
       router.refresh();
-    } catch {
-      setError("Network error. Please try again.");
-    } finally {
-      setSubmitting(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Network error. Please try again.");
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-destructive">
@@ -77,7 +75,10 @@ export default function RejectModal({ applicationId, open, onClose }: RejectModa
               rows={4}
               className={`resize-none ${error ? "border-destructive" : ""}`}
               value={reason}
-              onChange={(e) => { setReason(e.target.value); setError(null); }}
+              onChange={(e) => {
+                setReason(e.target.value);
+                setError(null);
+              }}
             />
             {error && <p className="text-xs text-destructive">{error}</p>}
           </div>

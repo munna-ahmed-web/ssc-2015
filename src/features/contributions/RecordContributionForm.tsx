@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -26,7 +26,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { getRecentPeriods } from "@/lib/periods";
 import { getPeriodLabel } from "@/types";
-import { getApiErrorMessage } from "@/lib/api/response";
+import { getMembers } from "@/features/members/api/members";
+import { useFetchMemberById } from "@/features/members/hook/memberHooks";
+
+import { useRecordContribution } from "./hook/contributionHooks";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -54,6 +57,11 @@ type RecordFormData = z.infer<typeof RecordSchema>;
 
 export default function RecordContributionForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const queryMemberId = searchParams.get("memberId") ?? "";
+
+  const { mutateAsync: recordContribution, isPending: submitting } = useRecordContribution();
+  const { data: qMember } = useFetchMemberById(queryMemberId);
 
   const [memberSearch, setMemberSearch] = useState("");
   const [memberResults, setMemberResults] = useState<MemberResult[]>([]);
@@ -77,6 +85,7 @@ export default function RecordContributionForm() {
   });
 
   const selectedPeriod = watch("periodLabel");
+  const pending = isSubmitting || submitting;
 
   // ── Member search ──────────────────────────────────────────────────────────
 
@@ -88,11 +97,14 @@ export default function RecordContributionForm() {
     const timer = setTimeout(async () => {
       setSearching(true);
       try {
-        const res = await fetch(
-          `/api/admin/members?search=${encodeURIComponent(memberSearch)}&status=active&limit=10`,
-        );
-        const data = await res.json();
-        setMemberResults(data.success ? data.data : []);
+        const data = await getMembers({
+          search: memberSearch,
+          status: "active",
+          limit: 10,
+        });
+        setMemberResults(data.members as any);
+      } catch {
+        setMemberResults([]);
       } finally {
         setSearching(false);
       }
@@ -109,6 +121,20 @@ export default function RecordContributionForm() {
     setValue("periodLabel", getPeriodLabel(member.contributionType));
   };
 
+  useEffect(() => {
+    if (qMember) {
+      selectMember({
+        _id: qMember._id,
+        fullName: qMember.fullName,
+        memberCode: qMember.memberCode,
+        phone: qMember.phone,
+        contributionType: qMember.contributionType,
+        contributionAmount: qMember.contributionAmount,
+        status: qMember.status,
+      });
+    }
+  }, [qMember]);
+
   // ── Periods dropdown ───────────────────────────────────────────────────────
 
   const periodOptions = selectedMember
@@ -120,20 +146,11 @@ export default function RecordContributionForm() {
   const onSubmit = async (data: RecordFormData) => {
     setServerError(null);
     try {
-      const res = await fetch("/api/admin/contributions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      const result = await res.json();
-      if (!res.ok || !result.success) {
-        setServerError(getApiErrorMessage(result, "Failed to record contribution."));
-        return;
-      }
+      await recordContribution(data);
       router.push("/dashboard/contributions");
       router.refresh();
-    } catch {
-      setServerError("Network error. Please try again.");
+    } catch (err) {
+      setServerError(err instanceof Error ? err.message : "Network error. Please try again.");
     }
   };
 
@@ -307,9 +324,9 @@ export default function RecordContributionForm() {
         )}
 
         <div className="flex gap-3">
-          <Button type="submit" disabled={isSubmitting || !selectedMember} className="gap-2">
-            {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-            {isSubmitting ? "Recording…" : "Record Contribution"}
+          <Button type="submit" disabled={pending || !selectedMember} className="gap-2">
+            {pending && <Loader2 className="size-4 animate-spin" />}
+            {pending ? "Recording…" : "Record Contribution"}
           </Button>
           <Button asChild variant="outline">
             <Link href="/dashboard/contributions">Cancel</Link>

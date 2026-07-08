@@ -2,11 +2,7 @@ import type { NextRequest } from "next/server";
 import { z } from "zod";
 
 import { verifyRefreshToken, signAccessToken } from "@/lib/jwt";
-import {
-  COOKIE_REFRESH,
-  buildAuthTokens,
-  setAuthCookies,
-} from "@/lib/auth";
+import { buildAuthTokens, setAuthCookies } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/api/response";
 
 const RefreshBodySchema = z.object({
@@ -21,7 +17,7 @@ const RefreshBodySchema = z.object({
  */
 export async function POST(req: NextRequest) {
   try {
-    let refreshToken = req.cookies.get(COOKIE_REFRESH)?.value ?? null;
+    let refreshToken = null;
 
     const contentType = req.headers.get("content-type") ?? "";
     if (contentType.includes("application/json")) {
@@ -40,12 +36,15 @@ export async function POST(req: NextRequest) {
     const accessToken = signAccessToken({ sub: payload.sub, role: payload.role });
     const tokens = buildAuthTokens(accessToken, refreshToken);
 
-    const res = apiSuccess({
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      expiresIn: tokens.expiresIn,
-      refreshExpiresIn: tokens.refreshExpiresIn,
-    }, { message: "Token refreshed." });
+    const res = apiSuccess(
+      {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        expiresIn: tokens.expiresIn,
+        refreshExpiresIn: tokens.refreshExpiresIn,
+      },
+      { message: "Token refreshed." },
+    );
 
     setAuthCookies(res, tokens);
     return res;

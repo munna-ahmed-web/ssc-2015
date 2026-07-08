@@ -20,9 +20,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import type { IMember, MemberStatus, IContribution } from "@/models";
 import { formatPeriodLabel } from "@/lib/periods";
 
+import type { SerializedMember, SerializedContribution } from "./types/types";
 import MemberStatusBadge from "./MemberStatusBadge";
 import MemberStatusActions from "./MemberStatusActions";
 import EditMemberModal from "./EditMemberModal";
@@ -54,13 +54,13 @@ function InfoRow({
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface MemberDetailClientProps {
-  member: IMember;
-  contributions: IContribution[];
+  member: SerializedMember;
+  contributions: SerializedContribution[];
 }
 
 export default function MemberDetailClient({ member, contributions }: MemberDetailClientProps) {
   const [editOpen, setEditOpen] = useState(false);
-  const status = member.status as MemberStatus;
+  const status = member.status;
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -99,7 +99,7 @@ export default function MemberDetailClient({ member, contributions }: MemberDeta
             </Button>
           </CardHeader>
           <CardContent className="space-y-4">
-            <MemberStatusActions memberId={member._id.toString()} currentStatus={status} />
+            <MemberStatusActions memberId={member._id} currentStatus={status} />
 
             {/* Lifecycle markers */}
             <div className="grid grid-cols-2 gap-4 pt-3 border-t border-border text-xs text-muted-foreground">
@@ -235,13 +235,10 @@ export default function MemberDetailClient({ member, contributions }: MemberDeta
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border bg-card">
-                    {contributions.map((c) => {
-                      const contrib = c as unknown as IContribution & {
-                        _id: { toString(): string };
-                      };
+                    {contributions.map((contrib) => {
                       return (
                         <tr
-                          key={contrib._id.toString()}
+                          key={contrib._id}
                           className={`hover:bg-muted/30 transition-colors ${contrib.isReversal ? "opacity-60" : ""}`}
                         >
                           <td className="px-4 py-3">

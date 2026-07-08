@@ -1,16 +1,14 @@
+/* eslint-disable no-nested-ternary */
+"use client";
+
 import Link from "next/link";
-import { ClipboardList } from "lucide-react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { ClipboardList, Loader2, AlertCircle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import ApplicationStatusBadge from "@/features/applications/ApplicationStatusBadge";
-import { connectDB } from "@/lib/db";
-import { MembershipApplication } from "@/models";
-import type { ApplicationStatus, IMembershipApplication } from "@/models";
-
-export const metadata = { title: "Applications — SSC-2015 Foundation Admin" };
-
-// ─── Status filter tabs ───────────────────────────────────────────────────────
+import { useFetchApplications } from "@/features/applications/hook/applicationHooks";
 
 const STATUS_TABS: { label: string; value: string }[] = [
   { label: "All", value: "all" },
@@ -19,47 +17,35 @@ const STATUS_TABS: { label: string; value: string }[] = [
   { label: "Rejected", value: "rejected" },
 ];
 
-// ─── Server data fetch ────────────────────────────────────────────────────────
+export default function ApplicationsPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
-async function getApplications(status: string, search: string, page: number) {
-  await connectDB();
-  const limit = 20;
-  const filter: Record<string, unknown> = {};
-  if (status !== "all") filter.status = status;
-  if (search) {
-    filter.$or = [
-      { fullName: { $regex: search, $options: "i" } },
-      { phone: { $regex: search, $options: "i" } },
-      { nid: { $regex: search, $options: "i" } },
-    ];
-  }
+  const status = searchParams.get("status") ?? "all";
+  const search = searchParams.get("search") ?? "";
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
 
-  const [applications, total] = await Promise.all([
-    MembershipApplication.find(filter)
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .lean(),
-    MembershipApplication.countDocuments(filter),
-  ]);
+  const { data, isLoading, isError, error } = useFetchApplications({
+    status,
+    search,
+    page,
+    limit: 20,
+  });
 
-  return { applications, total, limit };
-}
+  const handleSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const searchVal = (formData.get("search") as string).trim() ?? "";
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
-interface PageProps {
-  searchParams: Promise<{ status?: string; search?: string; page?: string }>;
-}
-
-export default async function ApplicationsPage({ searchParams }: PageProps) {
-  const sp = await searchParams;
-  const status = sp.status ?? "all";
-  const search = sp.search ?? "";
-  const page = Math.max(1, parseInt(sp.page ?? "1"));
-
-  const { applications, total, limit } = await getApplications(status, search, page);
-  const totalPages = Math.ceil(total / limit);
+    const params = new URLSearchParams(searchParams.toString());
+    if (searchVal) {
+      params.set("search", searchVal);
+    } else {
+      params.delete("search");
+    }
+    params.set("page", "1"); // Reset page to 1 on new search
+    router.push(`/dashboard/applications?${params.toString()}`);
+  };
 
   return (
     <div className="space-y-6">
@@ -73,7 +59,7 @@ export default async function ApplicationsPage({ searchParams }: PageProps) {
         </div>
         <Badge variant="secondary" className="self-start sm:self-center gap-1.5">
           <ClipboardList className="size-3" />
-          {total} total
+          {isLoading ? <Loader2 className="size-3 animate-spin" /> : (data?.total ?? 0)} total
         </Badge>
       </div>
 
@@ -95,11 +81,11 @@ export default async function ApplicationsPage({ searchParams }: PageProps) {
       </div>
 
       {/* Search */}
-      <form method="GET" className="flex gap-2 max-w-md">
-        <input type="hidden" name="status" value={status} />
+      <form onSubmit={handleSearchSubmit} className="flex gap-2 max-w-md">
         <input
           id="search-applications"
           name="search"
+          key={search} // Force refresh input field value on search clear
           defaultValue={search}
           placeholder="Search by name, phone, or NID…"
           className="flex-1 h-9 rounded-lg border border-input bg-card px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
@@ -114,97 +100,113 @@ export default async function ApplicationsPage({ searchParams }: PageProps) {
         )}
       </form>
 
-      {/* Table */}
-      <div className="rounded-xl border border-border overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50">
-              <tr>
-                {["Name", "Phone", "NID", "Type", "Amount", "Status", "Submitted", ""].map((h) => (
-                  <th
-                    key={h}
-                    scope="col"
-                    className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border bg-card">
-              {applications.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
-                    <ClipboardList className="size-8 mx-auto mb-2 opacity-30" />
-                    No applications found
-                  </td>
-                </tr>
-              ) : (
-                applications.map((app) => {
-                  const a = app as unknown as IMembershipApplication & {
-                    _id: { toString(): string };
-                    createdAt: Date;
-                  };
-                  return (
-                    <tr key={a._id.toString()} className="hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 font-medium">{a.fullName}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{a.phone}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{a.nid}</td>
-                      <td className="px-4 py-3">
-                        <Badge variant="outline" className="text-xs capitalize">
-                          {a.requestedContributionType}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        ৳{a.requestedContributionAmount.toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3">
-                        <ApplicationStatusBadge status={a.status as ApplicationStatus} />
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground text-xs">
-                        {new Date(a.createdAt).toLocaleDateString("en-BD")}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Button asChild size="xs" variant="outline">
-                          <Link href={`/dashboard/applications/${a._id.toString()}`}>Review</Link>
-                        </Button>
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center py-20 space-y-3">
+          <Loader2 className="size-8 text-primary animate-spin" />
+          <p className="text-sm text-muted-foreground">Loading applications…</p>
+        </div>
+      ) : isError ? (
+        <div className="rounded-xl border border-destructive/20 bg-destructive/10 px-5 py-6 text-center">
+          <AlertCircle className="size-8 mx-auto text-destructive mb-2" />
+          <p className="text-sm font-medium text-destructive">Failed to load applications</p>
+          <p className="text-xs text-destructive/80 mt-1">
+            {error instanceof Error ? error.message : "An error occurred."}
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Table */}
+          <div className="rounded-xl border border-border overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50">
+                  <tr>
+                    {["Name", "Phone", "NID", "Type", "Amount", "Status", "Submitted", ""].map(
+                      (h) => (
+                        <th
+                          key={h}
+                          scope="col"
+                          className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                        >
+                          {h}
+                        </th>
+                      ),
+                    )}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border bg-card">
+                  {data?.applications.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
+                        <ClipboardList className="size-8 mx-auto mb-2 opacity-30" />
+                        No applications found
                       </td>
                     </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span>
-            Showing {(page - 1) * limit + 1}–{Math.min(page * limit, total)} of {total}
-          </span>
-          <div className="flex gap-2">
-            {page > 1 && (
-              <Button asChild size="sm" variant="outline">
-                <Link
-                  href={`/dashboard/applications?status=${status}&search=${search}&page=${page - 1}`}
-                >
-                  Previous
-                </Link>
-              </Button>
-            )}
-            {page < totalPages && (
-              <Button asChild size="sm" variant="outline">
-                <Link
-                  href={`/dashboard/applications?status=${status}&search=${search}&page=${page + 1}`}
-                >
-                  Next
-                </Link>
-              </Button>
-            )}
+                  ) : (
+                    data?.applications.map((a) => {
+                      return (
+                        <tr key={a._id} className="hover:bg-muted/30 transition-colors">
+                          <td className="px-4 py-3 font-medium">{a.fullName}</td>
+                          <td className="px-4 py-3 text-muted-foreground">{a.phone}</td>
+                          <td className="px-4 py-3 text-muted-foreground">{a.nid}</td>
+                          <td className="px-4 py-3">
+                            <Badge variant="outline" className="text-xs capitalize">
+                              {a.requestedContributionType}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3">
+                            ৳{a.requestedContributionAmount.toLocaleString()}
+                          </td>
+                          <td className="px-4 py-3">
+                            <ApplicationStatusBadge status={a.status} />
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground text-xs">
+                            {new Date(a.createdAt).toLocaleDateString("en-BD")}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Button asChild size="xs" variant="outline">
+                              <Link href={`/dashboard/applications/${a._id}`}>Review</Link>
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+
+          {/* Pagination */}
+          {(data?.totalPages ?? 0) > 1 && (
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <span>
+                Showing {(page - 1) * (data?.limit ?? 20) + 1}–
+                {Math.min(page * (data?.limit ?? 20), data?.total ?? 0)} of {data?.total ?? 0}
+              </span>
+              <div className="flex gap-2">
+                {page > 1 && (
+                  <Button asChild size="sm" variant="outline">
+                    <Link
+                      href={`/dashboard/applications?status=${status}&search=${search}&page=${page - 1}`}
+                    >
+                      Previous
+                    </Link>
+                  </Button>
+                )}
+                {page < (data?.totalPages ?? 1) && (
+                  <Button asChild size="sm" variant="outline">
+                    <Link
+                      href={`/dashboard/applications?status=${status}&search=${search}&page=${page + 1}`}
+                    >
+                      Next
+                    </Link>
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

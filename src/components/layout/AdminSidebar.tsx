@@ -76,15 +76,18 @@ export default function AdminSidebar() {
   return (
     <aside className="flex h-full w-64 flex-col bg-sidebar border-r border-sidebar-border">
       {/* Logo */}
-      <div className="flex h-16 items-center gap-3 px-5 border-b border-sidebar-border">
-        <span className="flex size-8 items-center justify-center rounded-lg bg-primary">
+      <Link
+        href="/"
+        className="flex h-16 items-center gap-3 px-5 border-b border-sidebar-border hover:bg-sidebar-accent/40 transition-colors cursor-pointer group"
+      >
+        <span className="flex size-8 items-center justify-center rounded-lg bg-primary group-hover:scale-105 transition-transform">
           <Heart className="size-4 text-primary-foreground" />
         </span>
         <div>
           <p className="text-sm font-semibold text-sidebar-foreground leading-none">SSC-2015</p>
           <p className="text-xs text-sidebar-foreground/50 mt-0.5">Foundation Admin</p>
         </div>
-      </div>
+      </Link>
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">

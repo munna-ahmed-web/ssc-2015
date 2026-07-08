@@ -1,82 +1,59 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { Shield, Key, History, FileText, Banknote, User } from "lucide-react";
-import { connectDB } from "@/lib/db";
-import { MembershipApplication, Contribution, User as UserModel } from "@/models";
-import { getSessionUser } from "@/lib/auth";
+"use client";
+
+import { useState, useEffect } from "react";
+import { Shield, Key, History, FileText, Banknote, User, Loader2, AlertCircle } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { useFetchAdminProfile, useFetchAuditLogs } from "@/features/settings/hook/settingsHooks";
 
-export const metadata = { title: "Settings & Audit Log — SSC-2015 Foundation Admin" };
+export default function SettingsPage() {
+  const {
+    data: admin,
+    isLoading: isAdminLoading,
+    isError: isAdminError,
+    error: adminError,
+  } = useFetchAdminProfile();
 
-// ─── Data fetchers ──────────────────────────────────────────────────────────
+  const {
+    data: logs = [],
+    isLoading: isLogsLoading,
+    isError: isLogsError,
+    error: logsError,
+  } = useFetchAuditLogs();
 
-async function getAdminData(userId: string) {
-  await connectDB();
-  return UserModel.findById(userId).select("name email role createdAt").lean();
-}
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMounted(true);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
 
-async function getAuditLogs() {
-  await connectDB();
+  const isLoading = isAdminLoading || isLogsLoading;
+  const isError = isAdminError || isLogsError;
+  const error = adminError || logsError;
 
-  // Fetch parallel lists
-  const [reviews, contributions] = await Promise.all([
-    MembershipApplication.find({ status: { $ne: "pending" } })
-      .sort({ reviewedAt: -1 })
-      .limit(20)
-      .populate("reviewedBy", "name email")
-      .lean(),
-    Contribution.find({})
-      .sort({ createdAt: -1 })
-      .limit(20)
-      .populate("recordedBy", "name email")
-      .lean(),
-  ]);
-
-  // Map application reviews
-  const formattedReviews = reviews.map((r) => ({
-    id: r._id.toString(),
-    type: "application",
-    action: r.status === "approved" ? "Approved Application" : "Rejected Application",
-    targetName: r.fullName,
-    performedBy: (r.reviewedBy as unknown as { name?: string })?.name ?? "System / Admin",
-    timestamp: r.reviewedAt ?? r.updatedAt,
-    details: r.status === "rejected" ? `Reason: ${r.rejectionReason}` : undefined,
-  }));
-
-  // Map contributions
-  const formattedContributions = contributions.map((c) => ({
-    id: c._id.toString(),
-    type: "contribution",
-    action: c.isReversal ? "Reversed Contribution" : "Recorded Contribution",
-    targetName: c.memberName,
-    performedBy: (c.recordedBy as unknown as { name?: string })?.name ?? "Admin",
-    timestamp: c.createdAt,
-    details: `${c.isReversal ? "−" : ""}৳${c.amount.toLocaleString()} for period ${c.periodLabel}${c.notes ? ` (${c.notes})` : ""}`,
-  }));
-
-  // Sort combined timeline descending
-  return [...formattedReviews, ...formattedContributions].sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-  );
-}
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
-export default async function SettingsPage() {
-  const session = await getSessionUser();
-  if (!session) {
-    redirect("/login");
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 space-y-3">
+        <Loader2 className="size-8 text-primary animate-spin" />
+        <p className="text-sm text-muted-foreground">Loading settings & audit logs…</p>
+      </div>
+    );
   }
 
-  const [admin, logs] = await Promise.all([
-    getAdminData(session.sub),
-    getAuditLogs().catch(() => []),
-  ]);
-
-  if (!admin) {
-    redirect("/login");
+  if (isError || !admin) {
+    return (
+      <div className="max-w-md mx-auto mt-10 rounded-xl border border-destructive/20 bg-destructive/10 px-5 py-6 text-center">
+        <AlertCircle className="size-8 mx-auto text-destructive mb-2" />
+        <p className="text-sm font-medium text-destructive">Failed to load settings data</p>
+        <p className="text-xs text-destructive/80 mt-1">
+          {error instanceof Error ? error.message : "An error occurred."}
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -125,9 +102,11 @@ export default async function SettingsPage() {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Created On</span>
                   <span>
-                    {new Date(admin.createdAt).toLocaleDateString("en-BD", {
-                      dateStyle: "medium",
-                    })}
+                    {mounted
+                      ? new Date(admin.createdAt).toLocaleDateString("en-BD", {
+                          dateStyle: "medium",
+                        })
+                      : "Loading date…"}
                   </span>
                 </div>
               </div>
@@ -143,11 +122,15 @@ export default async function SettingsPage() {
             <CardContent className="space-y-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
                 <Shield className="size-4 text-primary shrink-0" />
-                <span>Edge Auth Guard: <span className="font-semibold text-foreground">Enabled</span></span>
+                <span>
+                  Edge Auth Guard: <span className="font-semibold text-foreground">Enabled</span>
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <Key className="size-4 text-primary shrink-0" />
-                <span>Session Expiry: <span className="font-semibold text-foreground">15 Minutes</span></span>
+                <span>
+                  Session Expiry: <span className="font-semibold text-foreground">15 Minutes</span>
+                </span>
               </div>
             </CardContent>
           </Card>
@@ -210,21 +193,28 @@ export default async function SettingsPage() {
                                 </p>
                               )}
                               <p className="text-xs text-muted-foreground mt-1">
-                                Performed by: <span className="font-medium text-foreground">{log.performedBy}</span>
+                                Performed by:{" "}
+                                <span className="font-medium text-foreground">
+                                  {log.performedBy}
+                                </span>
                               </p>
                             </div>
                             <div className="text-right text-xs text-muted-foreground shrink-0">
-                              <time dateTime={new Date(log.timestamp).toISOString()}>
-                                {new Date(log.timestamp).toLocaleDateString("en-BD", {
-                                  month: "short",
-                                  day: "numeric",
-                                })}
-                                {" at "}
-                                {new Date(log.timestamp).toLocaleTimeString("en-BD", {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
-                              </time>
+                              {mounted ? (
+                                <time dateTime={new Date(log.timestamp).toISOString()}>
+                                  {new Date(log.timestamp).toLocaleDateString("en-BD", {
+                                    month: "short",
+                                    day: "numeric",
+                                  })}
+                                  {" at "}
+                                  {new Date(log.timestamp).toLocaleTimeString("en-BD", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </time>
+                              ) : (
+                                <span>Loading time…</span>
+                              )}
                             </div>
                           </div>
                         </div>

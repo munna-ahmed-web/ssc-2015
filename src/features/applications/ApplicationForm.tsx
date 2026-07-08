@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-misused-promises */
+/* eslint-disable @typescript-eslint/no-floating-promises */
 "use client";
 
 import { useState, useRef } from "react";
@@ -20,7 +23,9 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { ApplicationSchema, type ApplicationFormData } from "@/lib/validation/application.schema";
-import { getApiErrorCode, getApiErrorDetails, getApiErrorMessage } from "@/lib/api/response";
+
+import { checkApplicationDuplicates } from "./api/applications";
+import { useSubmitApplication } from "./hook/applicationHooks";
 
 // ─── Inline FieldError (avoids installing extra shadcn component) ─────────────
 
@@ -72,6 +77,7 @@ function SectionHeader({ step, title, desc }: { step: string; title: string; des
 export default function ApplicationForm() {
   const router = useRouter();
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const { mutateAsync: submitApp, isPending: submitPending } = useSubmitApplication();
 
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
@@ -112,15 +118,19 @@ export default function ApplicationForm() {
     control,
     handleSubmit,
     watch,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting: isFormSubmitting },
   } = useForm<ApplicationFormData>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     resolver: zodResolver(ApplicationSchema) as any,
     defaultValues: {
       requestedContributionType: "monthly",
       requestedContributionAmount: 100,
     },
   });
+
+  const phone = watch("phone");
+  const nid = watch("nid");
+  const submitting = isFormSubmitting || submitPending;
 
   // ── Duplicate check ──────────────────────────────────────────────────────
 
@@ -131,16 +141,13 @@ export default function ApplicationForm() {
 
     setCheckingDuplicate(true);
     try {
-      const params = new URLSearchParams();
-      if (phoneToCheck) params.set("phone", phoneToCheck);
-      if (nidToCheck) params.set("nid", nidToCheck);
+      const data = await checkApplicationDuplicates({
+        phone: phoneToCheck,
+        nid: nidToCheck,
+      });
 
-      const res = await fetch(`/api/applications/check?${params}`);
-      const body = await res.json();
-      const payload = body.data ?? body;
-
-      if (payload.duplicate && Array.isArray(payload.conflicts)) {
-        setDuplicateConflicts(payload.conflicts);
+      if (data.duplicate && Array.isArray(data.conflicts)) {
+        setDuplicateConflicts(data.conflicts);
       } else {
         setDuplicateConflicts([]);
       }
@@ -150,9 +157,6 @@ export default function ApplicationForm() {
       setCheckingDuplicate(false);
     }
   };
-
-  const phone = watch("phone");
-  const nid = watch("nid");
 
   // ── Submit ───────────────────────────────────────────────────────────────
 
@@ -187,34 +191,29 @@ export default function ApplicationForm() {
         formData.append("file", photoFile);
       }
 
-      const res = await fetch("/api/applications", {
-        method: "POST",
-        body: formData,
-      });
-      const result = await res.json();
+      await submitApp(formData);
+      router.push("/become-a-member/success");
+    } catch (err: any) {
+      if (err && typeof err === "object") {
+        if (err.details) {
+          setFieldErrors(err.details);
+        }
 
-      if (!res.ok || !result.success) {
-        const details = getApiErrorDetails(result);
-        if (details) setFieldErrors(details);
-
-        if (getApiErrorCode(result) === "DUPLICATE_ENTRY" && details) {
+        if (err.code === "DUPLICATE_ENTRY" && err.details) {
           const conflicts: DuplicateConflict[] = [];
-          if (details.phone?.[0]) {
-            conflicts.push({ field: "phone", status: "pending", message: details.phone[0] });
+          if (err.details.phone?.[0]) {
+            conflicts.push({ field: "phone", status: "pending", message: err.details.phone[0] });
           }
-          if (details.nid?.[0]) {
-            conflicts.push({ field: "nid", status: "pending", message: details.nid[0] });
+          if (err.details.nid?.[0]) {
+            conflicts.push({ field: "nid", status: "pending", message: err.details.nid[0] });
           }
           if (conflicts.length > 0) setDuplicateConflicts(conflicts);
         }
 
-        setSubmitError(getApiErrorMessage(result, "Submission failed. Please try again."));
-        return;
+        setSubmitError(err.message || "Submission failed. Please try again.");
+      } else {
+        setSubmitError("Network error. Please check your connection and try again.");
       }
-
-      router.push("/become-a-member/success");
-    } catch {
-      setSubmitError("Network error. Please check your connection and try again.");
     }
   };
 
@@ -341,9 +340,7 @@ export default function ApplicationForm() {
       </section>
 
       {/* ── Duplicate block ── */}
-      {duplicateConflicts.length > 0 && (
-        <DuplicateWarningBanner conflicts={duplicateConflicts} />
-      )}
+      {duplicateConflicts.length > 0 && <DuplicateWarningBanner conflicts={duplicateConflicts} />}
       {checkingDuplicate && (
         <p className="text-xs text-muted-foreground flex items-center gap-2">
           <Loader2 className="size-3 animate-spin" /> Checking for duplicates…
@@ -482,11 +479,11 @@ export default function ApplicationForm() {
         <Button
           type="submit"
           size="lg"
-          disabled={isSubmitting || duplicateConflicts.length > 0}
+          disabled={submitting || duplicateConflicts.length > 0}
           className="w-full sm:w-auto gap-2"
         >
-          {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-          {isSubmitting ? "Submitting…" : "Submit Application"}
+          {submitting && <Loader2 className="size-4 animate-spin" />}
+          {submitting ? "Submitting…" : "Submit Application"}
         </Button>
         <p className="text-xs text-muted-foreground text-center sm:text-left">
           By submitting, your application will be reviewed by an admin before approval.

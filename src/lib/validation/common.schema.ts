@@ -10,7 +10,8 @@ export const passwordSchema = z
 
 export const phoneSchema = z
   .string()
-  .regex(/^\+?[1-9]\d{1,14}$/, { error: "Invalid phone number" });
+  .transform((val) => val.replace(/[\s-()]/g, ""))
+  .pipe(z.string().regex(/^\+?\d{7,15}$/, { message: "Invalid phone number" }));
 
 export const paginationSchema = z.object({
   page: z.coerce.number().int().positive().default(1),

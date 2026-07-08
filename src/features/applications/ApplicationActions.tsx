@@ -1,12 +1,16 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-misused-promises */
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
-import { getApiErrorMessage } from "@/lib/api/response";
-import RejectModal from "./RejectModal";
 import type { ApplicationStatus } from "@/models";
+
+import { useUpdateApplicationAction } from "./hook/applicationHooks";
+import RejectModal from "./RejectModal";
 
 interface ApplicationActionsProps {
   applicationId: string;
@@ -15,7 +19,7 @@ interface ApplicationActionsProps {
 
 export default function ApplicationActions({ applicationId, status }: ApplicationActionsProps) {
   const router = useRouter();
-  const [approving, setApproving] = useState(false);
+  const { mutateAsync: updateApplication, isPending: approving } = useUpdateApplicationAction();
   const [rejectOpen, setRejectOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,23 +44,11 @@ export default function ApplicationActions({ applicationId, status }: Applicatio
 
   const handleApprove = async () => {
     setError(null);
-    setApproving(true);
     try {
-      const res = await fetch(`/api/admin/applications/${applicationId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "approve" }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        setError(getApiErrorMessage(data, "Approval failed."));
-        return;
-      }
+      await updateApplication({ id: applicationId, data: { action: "approve" } });
       router.refresh();
-    } catch {
-      setError("Network error. Please try again.");
-    } finally {
-      setApproving(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Network error. Please try again.");
     }
   };
 
@@ -73,7 +65,11 @@ export default function ApplicationActions({ applicationId, status }: Applicatio
           disabled={approving}
           className="gap-2 bg-green-600 hover:bg-green-700 text-white"
         >
-          {approving ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+          {approving ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <CheckCircle2 className="size-4" />
+          )}
           {approving ? "Approving…" : "Approve Application"}
         </Button>
         <Button
