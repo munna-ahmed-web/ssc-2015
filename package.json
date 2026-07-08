@@ -32,6 +32,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-hook-form": "^7.75.0",
+    "react-to-print": "^3.3.0",
     "shadcn": "^4.3.1",
     "speakeasy": "^2.0.0",
     "swiper": "^14.0.1",

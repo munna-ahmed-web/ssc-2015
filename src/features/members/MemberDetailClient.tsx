@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useReactToPrint } from "react-to-print";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -14,6 +15,7 @@ import {
   Banknote,
   Edit2,
   CalendarDays,
+  Printer,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -26,6 +28,7 @@ import type { SerializedMember, SerializedContribution } from "./types/types";
 import MemberStatusBadge from "./MemberStatusBadge";
 import MemberStatusActions from "./MemberStatusActions";
 import EditMemberModal from "./EditMemberModal";
+import MemberPrintView from "./MemberPrintView";
 
 // ─── Info row helper ──────────────────────────────────────────────────────────
 
@@ -60,6 +63,8 @@ interface MemberDetailClientProps {
 
 export default function MemberDetailClient({ member, contributions }: MemberDetailClientProps) {
   const [editOpen, setEditOpen] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
+  const handlePrint = useReactToPrint({ contentRef: printRef });
   const status = member.status;
 
   return (
@@ -88,15 +93,26 @@ export default function MemberDetailClient({ member, contributions }: MemberDeta
             <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
               Membership Lifecycle Controls
             </CardTitle>
-            <Button
-              size="xs"
-              variant="outline"
-              className="gap-1.5"
-              onClick={() => setEditOpen(true)}
-            >
-              <Edit2 className="size-3" />
-              Edit Profile
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                size="xs"
+                variant="outline"
+                className="gap-1.5"
+                onClick={handlePrint}
+              >
+                <Printer className="size-3" />
+                Print
+              </Button>
+              <Button
+                size="xs"
+                variant="outline"
+                className="gap-1.5"
+                onClick={() => setEditOpen(true)}
+              >
+                <Edit2 className="size-3" />
+                Edit Profile
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <MemberStatusActions memberId={member._id} currentStatus={status} />
@@ -278,6 +294,11 @@ export default function MemberDetailClient({ member, contributions }: MemberDeta
           )}
         </CardContent>
       </Card>
+
+      {/* Hidden print view – only rendered during print */}
+      <div className="hidden">
+        <MemberPrintView ref={printRef} member={member} />
+      </div>
 
       <EditMemberModal member={member} open={editOpen} onClose={() => setEditOpen(false)} />
     </div>
