@@ -5,6 +5,7 @@ import {
   GallerySection,
   HowItWorksSection,
   ValuesSection,
+  PrinciplesSection,
   CtaSection,
 } from "@/features/landing";
 
@@ -17,7 +18,9 @@ export default function HomePage() {
       <GallerySection />
       <HowItWorksSection />
       <ValuesSection />
+      <PrinciplesSection />
       <CtaSection />
     </div>
   );
 }
+

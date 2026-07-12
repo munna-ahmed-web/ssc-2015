@@ -4,5 +4,6 @@ export { default as AboutSection } from "./AboutSection";
 export { default as GallerySection } from "./GallerySection";
 export { default as HowItWorksSection } from "./HowItWorksSection";
 export { default as ValuesSection } from "./ValuesSection";
+export { default as PrinciplesSection } from "./PrinciplesSection";
 export { default as CtaSection } from "./CtaSection";
 
