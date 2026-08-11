@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { connectDB } from "@/lib/db";
 import { HeroImage } from "@/models";
 import { requireAdmin } from "@/lib/auth";
+import { logActivity } from "@/lib/audit";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { apiError, apiSuccess, handleRouteError } from "@/lib/api/response";
 
@@ -73,6 +74,14 @@ export async function POST(req: NextRequest) {
       order,
       isActive: true,
       uploadedBy: admin.sub,
+    });
+
+    await logActivity({
+      actorId: admin.sub,
+      action: "hero_image.upload",
+      entityType: "hero_image",
+      entityId: String(heroImage._id),
+      entityLabel: altText,
     });
 
     return apiSuccess(heroImage, { status: 201 });

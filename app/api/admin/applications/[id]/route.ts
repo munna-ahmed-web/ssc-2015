@@ -5,6 +5,7 @@ import { z } from "zod";
 import { connectDB } from "@/lib/db";
 import { MembershipApplication, Member } from "@/models";
 import { requireAdmin } from "@/lib/auth";
+import { logActivity } from "@/lib/audit";
 import { apiError, apiSuccess, handleRouteError } from "@/lib/api/response";
 
 const ApproveSchema = z.object({ action: z.literal("approve") });
@@ -23,10 +24,7 @@ async function generateMemberCode(): Promise<string> {
   return `MEM-${String(count + 1).padStart(3, "0")}`;
 }
 
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await requireAdmin();
     await connectDB();
@@ -36,7 +34,9 @@ export async function GET(
       return apiError("BAD_REQUEST", "Invalid application ID.", 400);
     }
 
-    const application = await MembershipApplication.findById(id).lean();
+    const application = await MembershipApplication.findById(id)
+      .populate("reviewedBy", "name")
+      .lean();
     if (!application) {
       return apiError("NOT_FOUND", "Application not found.", 404);
     }
@@ -48,10 +48,7 @@ export async function GET(
   }
 }
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const admin = await requireAdmin();
     await connectDB();
@@ -116,6 +113,15 @@ export async function PATCH(
       application.reviewedAt = now;
       await application.save();
 
+      await logActivity({
+        actorId: admin.sub,
+        action: "application.approve",
+        entityType: "application",
+        entityId: application._id as mongoose.Types.ObjectId,
+        entityLabel: application.fullName,
+        details: { memberCode, memberId: member._id.toString() },
+      });
+
       return apiSuccess(
         { memberCode, memberId: member._id.toString(), applicationId: application._id.toString() },
         { message: `Application approved. Member ${memberCode} created.` },
@@ -127,6 +133,15 @@ export async function PATCH(
     application.reviewedBy = reviewedBy;
     application.reviewedAt = now;
     await application.save();
+
+    await logActivity({
+      actorId: admin.sub,
+      action: "application.reject",
+      entityType: "application",
+      entityId: application._id as mongoose.Types.ObjectId,
+      entityLabel: application.fullName,
+      details: { rejectionReason: parsed.data.rejectionReason },
+    });
 
     return apiSuccess(
       { applicationId: application._id.toString(), status: "rejected" },

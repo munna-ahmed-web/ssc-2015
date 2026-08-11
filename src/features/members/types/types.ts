@@ -19,23 +19,11 @@ export interface SerializedMember {
   joinedAt: string;
   exitedAt?: string;
   suspendedAt?: string;
-  approvedBy: string;
+  /** Plain id on list/mutation responses; populated { _id, name } on detail GET */
+  approvedBy: string | { _id: string; name: string };
   createdAt: string;
   updatedAt: string;
 }
 
-export interface SerializedContribution {
-  _id: string;
-  memberId: string;
-  memberName: string;
-  contributionType: "weekly" | "monthly";
-  amount: number;
-  periodLabel: string;
-  paidAt: string;
-  isReversal: boolean;
-  reversalOf?: string;
-  recordedBy: string;
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+// Re-exported from the contributions feature (single source of truth)
+export type { SerializedContribution } from "@/features/contributions/types/types";

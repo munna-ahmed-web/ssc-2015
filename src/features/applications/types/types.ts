@@ -15,7 +15,8 @@ export interface SerializedApplication {
   requestedContributionAmount: number;
   status: ApplicationStatus;
   rejectionReason?: string;
-  reviewedBy?: string;
+  /** Plain id on list responses; populated { _id, name } on detail GET */
+  reviewedBy?: string | { _id: string; name: string };
   reviewedAt?: string;
   memberId?: string;
   createdAt: string;

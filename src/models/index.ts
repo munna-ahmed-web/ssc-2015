@@ -9,6 +9,7 @@
  *   import { User, Member, Contribution } from "@/models";
  */
 
+export { default as AuditLog } from "./AuditLog";
 export { default as Contribution } from "./Contribution";
 export { default as GalleryImage } from "./GalleryImage";
 export { default as HeroImage } from "./HeroImage";
@@ -17,6 +18,8 @@ export { default as MembershipApplication } from "./MembershipApplication";
 export { default as User } from "./User";
 
 // Re-export interfaces for convenient typing
+export { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "./AuditLog";
+export type { AuditAction, AuditEntityType, IAuditLog } from "./AuditLog";
 export type { IContribution } from "./Contribution";
 export type { IGalleryImage } from "./GalleryImage";
 export type { IHeroImage } from "./HeroImage";

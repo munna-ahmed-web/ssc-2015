@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getPeriodLabel } from "@/types";
 import { formatPeriodLabel } from "@/lib/periods";
+import { adminName } from "@/lib/utils";
 import { ContributionRowActions } from "@/features/contributions/ContributionRowActions";
 import {
   useFetchLedger,
@@ -215,7 +216,16 @@ export default function ContributionsPage() {
                   <table className="w-full text-sm">
                     <thead className="bg-muted/50">
                       <tr>
-                        {["Member", "Period", "Amount", "Type", "Paid On", "Notes", ""].map((h) => (
+                        {[
+                          "Member",
+                          "Period",
+                          "Amount",
+                          "Type",
+                          "Paid On",
+                          "Recorded By",
+                          "Notes",
+                          "",
+                        ].map((h) => (
                           <th
                             key={h}
                             scope="col"
@@ -229,7 +239,7 @@ export default function ContributionsPage() {
                     <tbody className="divide-y divide-border bg-card">
                       {contributions.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
+                          <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
                             <Banknote className="size-8 mx-auto mb-2 opacity-30" />
                             No ledger entries found for this period
                           </td>
@@ -284,6 +294,9 @@ export default function ContributionsPage() {
                               </td>
                               <td className="px-4 py-3 text-muted-foreground text-xs">
                                 {new Date(c.paidAt).toLocaleDateString("en-BD")}
+                              </td>
+                              <td className="px-4 py-3 text-xs text-muted-foreground">
+                                {adminName(c.recordedBy) ?? "—"}
                               </td>
                               <td className="px-4 py-3 text-xs text-muted-foreground truncate max-w-40">
                                 {c.notes ?? "—"}

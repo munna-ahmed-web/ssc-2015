@@ -5,6 +5,7 @@ import { z } from "zod";
 import { connectDB } from "@/lib/db";
 import { Member } from "@/models";
 import { requireAdmin } from "@/lib/auth";
+import { buildFieldDiff, logActivity } from "@/lib/audit";
 import { apiError, apiSuccess, handleRouteError } from "@/lib/api/response";
 
 const UpdateMemberSchema = z.object({
@@ -38,7 +39,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       return apiError("BAD_REQUEST", "Invalid member ID.", 400);
     }
 
-    const member = await Member.findById(id).lean();
+    const member = await Member.findById(id).populate("approvedBy", "name").lean();
     if (!member) {
       return apiError("NOT_FOUND", "Member not found.", 404);
     }
@@ -55,7 +56,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAdmin();
+    const admin = await requireAdmin();
     await connectDB();
 
     const { id } = await params;
@@ -81,6 +82,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const data = parsed.data;
 
+    // Snapshot changed fields before applying — used for the audit trail diff
+    const changes = buildFieldDiff(member.toObject(), data);
+    const statusChanged = data.status !== undefined && data.status !== member.status;
+
     if (data.fullName !== undefined) member.fullName = data.fullName;
     if (data.guardianName !== undefined) member.guardianName = data.guardianName;
     if (data.phone !== undefined) member.phone = data.phone;
@@ -100,13 +105,25 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         member.suspendedAt = new Date();
       } else if (data.status === "exited") {
         member.exitedAt = new Date();
-      } else if (data.status === "active") {
+      } else {
+        // status === "active" (reactivation)
         member.suspendedAt = undefined;
         member.exitedAt = undefined;
       }
     }
 
     await member.save();
+
+    if (Object.keys(changes).length > 0) {
+      await logActivity({
+        actorId: admin.sub,
+        action: statusChanged ? "member.status_change" : "member.update",
+        entityType: "member",
+        entityId: member._id as mongoose.Types.ObjectId,
+        entityLabel: member.fullName,
+        details: { changes },
+      });
+    }
 
     return apiSuccess(member, { message: "Member updated successfully." });
   } catch (err) {

@@ -10,6 +10,7 @@ import {
   BarChart3,
   ImagePlay,
   Images,
+  History,
   Settings,
   Heart,
   ChevronRight,
@@ -55,6 +56,11 @@ const NAV_ITEMS = [
     label: "Gallery Images",
     href: "/dashboard/gallery-images",
     icon: Images,
+  },
+  {
+    label: "Activity Log",
+    href: "/dashboard/activity",
+    icon: History,
   },
   {
     label: "Settings",

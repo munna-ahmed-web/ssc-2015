@@ -1,16 +1,13 @@
 import type { NextRequest } from "next/server";
-import { ZodError, z } from "zod";
+import { ZodError } from "zod";
 
 import { connectDB } from "@/lib/db";
 import { User } from "@/models";
 import { verifyPassword } from "@/lib/password";
 import { signAccessToken, signRefreshToken } from "@/lib/jwt";
 import { LoginSchema } from "@/lib/validation/auth.schema";
-import {
-  buildAuthTokens,
-  serializeAuthResponse,
-  setAuthCookies,
-} from "@/lib/auth";
+import { buildAuthTokens, serializeAuthResponse, setAuthCookies } from "@/lib/auth";
+import { logActivity } from "@/lib/audit";
 import { apiError, apiForbidden, apiSuccess, handleRouteError } from "@/lib/api/response";
 
 /**
@@ -42,10 +39,14 @@ export async function POST(req: NextRequest) {
     }
 
     const tokenPayload = { sub: user._id.toString(), role: user.role as "admin" };
-    const tokens = buildAuthTokens(
-      signAccessToken(tokenPayload),
-      signRefreshToken(tokenPayload),
-    );
+    const tokens = buildAuthTokens(signAccessToken(tokenPayload), signRefreshToken(tokenPayload));
+
+    await logActivity({
+      actorId: user._id.toString(),
+      actorName: user.name,
+      action: "auth.login",
+      entityType: "auth",
+    });
 
     const res = apiSuccess(
       serializeAuthResponse(

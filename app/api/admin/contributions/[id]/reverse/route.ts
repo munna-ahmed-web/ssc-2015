@@ -5,16 +5,14 @@ import { z } from "zod";
 import { connectDB } from "@/lib/db";
 import { Contribution } from "@/models";
 import { requireAdmin } from "@/lib/auth";
+import { logActivity } from "@/lib/audit";
 import { apiError, apiSuccess, handleRouteError } from "@/lib/api/response";
 
 const ReversalSchema = z.object({
   notes: z.string().min(5, "Reversal reason must be at least 5 characters").max(500).trim(),
 });
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const admin = await requireAdmin();
     await connectDB();
@@ -60,6 +58,20 @@ export async function POST(
       reversalOf: original._id,
       recordedBy: new mongoose.Types.ObjectId(admin.sub),
       notes: parsed.data.notes,
+    });
+
+    await logActivity({
+      actorId: admin.sub,
+      action: "contribution.reverse",
+      entityType: "contribution",
+      entityId: reversal._id as mongoose.Types.ObjectId,
+      entityLabel: original.memberName,
+      details: {
+        amount: original.amount,
+        periodLabel: original.periodLabel,
+        reversalOf: original._id.toString(),
+        notes: parsed.data.notes,
+      },
     });
 
     return apiSuccess(reversal, {

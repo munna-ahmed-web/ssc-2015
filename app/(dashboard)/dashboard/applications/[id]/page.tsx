@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { adminName } from "@/lib/utils";
 import ApplicationStatusBadge from "@/features/applications/ApplicationStatusBadge";
 import ApplicationActions from "@/features/applications/ApplicationActions";
 import { useFetchApplicationById } from "@/features/applications/hook/applicationHooks";
@@ -48,7 +49,7 @@ function InfoRow({
 
 export default function ApplicationDetailPage() {
   const params = useParams();
-  const id = params?.id as string;
+  const id = params.id as string;
 
   const { data: app, isLoading, isError, error } = useFetchApplicationById(id);
 
@@ -100,6 +101,12 @@ export default function ApplicationDetailPage() {
           {app.reviewedAt && (
             <p className="text-xs text-muted-foreground mt-3">
               Reviewed on {new Date(app.reviewedAt).toLocaleString("en-BD")}
+              {adminName(app.reviewedBy) && (
+                <>
+                  {" by "}
+                  <span className="font-medium text-foreground">{adminName(app.reviewedBy)}</span>
+                </>
+              )}
             </p>
           )}
           {app.rejectionReason && (

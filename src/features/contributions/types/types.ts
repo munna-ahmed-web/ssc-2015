@@ -8,7 +8,8 @@ export interface SerializedContribution {
   paidAt: string;
   isReversal: boolean;
   reversalOf?: string;
-  recordedBy: string;
+  /** Plain id on mutation responses; populated { _id, name } on ledger GET */
+  recordedBy: string | { _id: string; name: string };
   notes?: string;
   createdAt: string;
   updatedAt: string;

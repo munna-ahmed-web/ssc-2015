@@ -5,6 +5,7 @@ import { z } from "zod";
 import { connectDB } from "@/lib/db";
 import { HeroImage } from "@/models";
 import { requireAdmin } from "@/lib/auth";
+import { logActivity } from "@/lib/audit";
 import { deleteFromCloudinary } from "@/lib/cloudinary";
 import { apiError, apiSuccess, handleRouteError } from "@/lib/api/response";
 
@@ -15,12 +16,9 @@ const UpdateSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAdmin();
+    const admin = await requireAdmin();
     await connectDB();
 
     const { id } = await params;
@@ -52,6 +50,15 @@ export async function PATCH(
 
     await image.save();
 
+    await logActivity({
+      actorId: admin.sub,
+      action: "hero_image.update",
+      entityType: "hero_image",
+      entityId: id,
+      entityLabel: image.altText,
+      details: { changes: data },
+    });
+
     return apiSuccess(image);
   } catch (err) {
     if (err instanceof Response) return err;
@@ -59,12 +66,9 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAdmin();
+    const admin = await requireAdmin();
     await connectDB();
 
     const { id } = await params;
@@ -82,6 +86,14 @@ export async function DELETE(
     }
 
     await image.deleteOne();
+
+    await logActivity({
+      actorId: admin.sub,
+      action: "hero_image.delete",
+      entityType: "hero_image",
+      entityId: id,
+      entityLabel: image.altText,
+    });
 
     return apiSuccess({ id }, { message: "Image deleted successfully." });
   } catch (err) {

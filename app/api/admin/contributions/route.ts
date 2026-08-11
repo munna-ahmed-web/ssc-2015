@@ -5,6 +5,7 @@ import { z } from "zod";
 import { connectDB } from "@/lib/db";
 import { Contribution, Member } from "@/models";
 import { requireAdmin } from "@/lib/auth";
+import { logActivity } from "@/lib/audit";
 import { apiError, apiSuccess, handleRouteError } from "@/lib/api/response";
 
 export async function GET(req: NextRequest) {
@@ -35,6 +36,7 @@ export async function GET(req: NextRequest) {
         .sort({ paidAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
+        .populate("recordedBy", "name")
         .lean(),
       Contribution.countDocuments(filter),
       periodLabel
@@ -128,6 +130,15 @@ export async function POST(req: NextRequest) {
       isReversal: false,
       recordedBy: new mongoose.Types.ObjectId(admin.sub),
       notes,
+    });
+
+    await logActivity({
+      actorId: admin.sub,
+      action: "contribution.record",
+      entityType: "contribution",
+      entityId: contribution._id as mongoose.Types.ObjectId,
+      entityLabel: member.fullName,
+      details: { amount: contribution.amount, periodLabel, memberId: member._id.toString() },
     });
 
     return apiSuccess(contribution, {

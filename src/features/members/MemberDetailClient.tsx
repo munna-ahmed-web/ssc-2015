@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { formatPeriodLabel } from "@/lib/periods";
+import { adminName } from "@/lib/utils";
 
 import type { SerializedMember, SerializedContribution } from "./types/types";
 import MemberStatusBadge from "./MemberStatusBadge";
@@ -94,12 +95,7 @@ export default function MemberDetailClient({ member, contributions }: MemberDeta
               Membership Lifecycle Controls
             </CardTitle>
             <div className="flex items-center gap-2">
-              <Button
-                size="xs"
-                variant="outline"
-                className="gap-1.5"
-                onClick={handlePrint}
-              >
+              <Button size="xs" variant="outline" className="gap-1.5" onClick={handlePrint}>
                 <Printer className="size-3" />
                 Print
               </Button>
@@ -140,6 +136,14 @@ export default function MemberDetailClient({ member, contributions }: MemberDeta
                   Exited At:{" "}
                   <span className="font-medium text-foreground">
                     {new Date(member.exitedAt).toLocaleDateString("en-BD", { dateStyle: "medium" })}
+                  </span>
+                </div>
+              )}
+              {adminName(member.approvedBy) && (
+                <div>
+                  Approved By:{" "}
+                  <span className="font-medium text-foreground">
+                    {adminName(member.approvedBy)}
                   </span>
                 </div>
               )}
@@ -239,7 +243,7 @@ export default function MemberDetailClient({ member, contributions }: MemberDeta
                 <table className="w-full text-sm">
                   <thead className="bg-muted/50">
                     <tr>
-                      {["Period", "Amount", "Type", "Paid On", "Notes"].map((h) => (
+                      {["Period", "Amount", "Type", "Paid On", "Recorded By", "Notes"].map((h) => (
                         <th
                           key={h}
                           scope="col"
@@ -280,6 +284,9 @@ export default function MemberDetailClient({ member, contributions }: MemberDeta
                           </td>
                           <td className="px-4 py-3 text-muted-foreground text-xs">
                             {new Date(contrib.paidAt).toLocaleDateString("en-BD")}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground">
+                            {adminName(contrib.recordedBy) ?? "—"}
                           </td>
                           <td className="px-4 py-3 text-xs text-muted-foreground truncate max-w-40">
                             {contrib.notes ?? "—"}
