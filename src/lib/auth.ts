@@ -3,12 +3,18 @@
  * Supports web (httpOnly cookies) and mobile/API (Authorization: Bearer).
  */
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 import { verifyAccessToken, type TokenPayload } from "@/lib/jwt";
 import { apiUnauthorized } from "@/lib/api/response";
 
 import { parseBearerToken } from "./auth/constants";
+
+/** httpOnly cookie holding the member-portal session token. */
+export const COOKIE_MEMBER = "member_token";
+
+/** Member-portal session lifetime in seconds (90 days). */
+export const MEMBER_MAX_AGE = 90 * 24 * 60 * 60;
 
 export {
   COOKIE_ACCESS,
@@ -53,4 +59,27 @@ export async function requireAdmin(): Promise<TokenPayload> {
     throw apiUnauthorized();
   }
   return user;
+}
+
+/**
+ * Member-portal auth guard. Reads the member session from the `member_token`
+ * httpOnly cookie (web) or a Bearer header (mobile), and requires role
+ * "member" — admin tokens are NOT accepted here, and member tokens are never
+ * accepted by requireAdmin(). `sub` is the Member _id.
+ * Throws a 401 Response if not authenticated.
+ */
+export async function requireMember(): Promise<TokenPayload> {
+  try {
+    const bearer = await resolveAccessToken();
+    const cookieStore = await cookies();
+    const token = bearer ?? cookieStore.get(COOKIE_MEMBER)?.value;
+    if (!token) throw apiUnauthorized();
+
+    const payload = verifyAccessToken(token);
+    if (payload.role !== "member") throw apiUnauthorized();
+    return payload;
+  } catch (err) {
+    if (err instanceof Response) throw err;
+    throw apiUnauthorized();
+  }
 }

@@ -19,7 +19,7 @@ const REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN ?? "7d";
 
 if (!ACCESS_SECRET || !REFRESH_SECRET) {
   throw new Error(
-    "JWT secrets are not defined. Set JWT_ACCESS_SECRET and JWT_REFRESH_SECRET in .env.local"
+    "JWT secrets are not defined. Set JWT_ACCESS_SECRET and JWT_REFRESH_SECRET in .env.local",
   );
 }
 
@@ -42,6 +42,22 @@ export function signAccessToken(payload: Omit<TokenPayload, "iat" | "exp">): str
 
 export function verifyAccessToken(token: string): TokenPayload {
   return jwt.verify(token, ACCESS_SECRET) as TokenPayload;
+}
+
+// ─── Member Portal Token ──────────────────────────────────────────────────────
+
+/** Member-portal session lifetime (long-lived; login is via emailed magic link). */
+const MEMBER_EXPIRES_IN = process.env.JWT_MEMBER_EXPIRES_IN ?? "90d";
+
+/**
+ * Long-lived read-only session token for the member portal.
+ * `sub` is a Member _id (NOT a User _id) and `role` is always "member",
+ * so `requireAdmin()` rejects it everywhere by construction.
+ */
+export function signMemberToken(memberId: string): string {
+  return jwt.sign({ sub: memberId, role: "member" }, ACCESS_SECRET, {
+    expiresIn: MEMBER_EXPIRES_IN as jwt.SignOptions["expiresIn"],
+  });
 }
 
 // ─── Refresh Token ────────────────────────────────────────────────────────────
