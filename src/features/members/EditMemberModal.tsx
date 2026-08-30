@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
@@ -44,6 +44,7 @@ const EditMemberSchema = z.object({
   photoUrl: z.string().url("Invalid image URL").or(z.literal("")),
   contributionType: z.enum(["weekly", "monthly"]),
   contributionAmount: z.coerce.number().min(1, "Amount must be at least 1"),
+  showOnWebsite: z.boolean(),
 });
 
 type EditMemberFormData = z.infer<typeof EditMemberSchema>;
@@ -71,7 +72,7 @@ export default function EditMemberModal({ member, open, onClose }: EditMemberMod
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<EditMemberFormData>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -88,10 +89,12 @@ export default function EditMemberModal({ member, open, onClose }: EditMemberMod
       photoUrl: member.photoUrl ?? "",
       contributionType: member.contributionType,
       contributionAmount: member.contributionAmount,
+      showOnWebsite: member.showOnWebsite ?? true,
     },
   });
 
-  const contributionTypeValue = watch("contributionType");
+  // useWatch (not watch) — subscription-based and safe under the React Compiler
+  const contributionTypeValue = useWatch({ control, name: "contributionType" });
   const submitting = isSubmitting || updating;
 
   const onSubmit = async (data: EditMemberFormData) => {
@@ -233,6 +236,22 @@ export default function EditMemberModal({ member, open, onClose }: EditMemberMod
                 {errors.photoUrl && (
                   <p className="text-xs text-destructive">{errors.photoUrl.message}</p>
                 )}
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="flex items-center gap-3 cursor-pointer rounded-lg border border-border bg-muted/30 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    className="rounded border-input text-primary focus:ring-ring"
+                    {...register("showOnWebsite")}
+                  />
+                  <span className="text-sm">
+                    <span className="font-medium">Show on public website</span>
+                    <span className="block text-xs text-muted-foreground mt-0.5">
+                      Displays this member&apos;s name and photo in the home page members section
+                    </span>
+                  </span>
+                </label>
               </div>
             </div>
           </div>

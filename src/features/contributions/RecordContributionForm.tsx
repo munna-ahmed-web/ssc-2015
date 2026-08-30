@@ -1,8 +1,15 @@
 "use client";
 
 /* eslint-disable @typescript-eslint/no-misused-promises */
+/*
+ * react-hook-form's `watch()` is not memoization-safe, so the React Compiler
+ * skips this component and flags the library call. Behaviour is correct as
+ * written; `useWatch` is not used here because the search/prefill effects below
+ * rely on this component staying uncompiled.
+ */
+/* eslint-disable react-hooks/incompatible-library */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -48,6 +55,13 @@ interface MemberResult {
 const RecordSchema = z.object({
   memberId: z.string().min(1, "Please select a member"),
   periodLabel: z.string().min(1, "Please select a period"),
+  amount: z.preprocess(
+    (val) => (val === "" || val === undefined ? undefined : Number(val)),
+    z
+      .number({ error: "Please enter the payment amount" })
+      .min(1, "Amount must be at least 1")
+      .max(1_000_000, "Amount is too large"),
+  ),
   paidAt: z.string().min(10, "Please enter payment date"),
   notes: z.string().max(500).optional(),
 });
@@ -80,11 +94,13 @@ export default function RecordContributionForm() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(RecordSchema) as any,
     defaultValues: {
+      periodLabel: "",
       paidAt: new Date().toISOString().split("T")[0],
     },
   });
 
   const selectedPeriod = watch("periodLabel");
+  const enteredAmount = watch("amount");
   const pending = isSubmitting || submitting;
 
   // ── Member search ──────────────────────────────────────────────────────────
@@ -102,7 +118,7 @@ export default function RecordContributionForm() {
           status: "active",
           limit: 10,
         });
-        setMemberResults(data.members as any);
+        setMemberResults(data.members as unknown as MemberResult[]);
       } catch {
         setMemberResults([]);
       } finally {
@@ -112,14 +128,19 @@ export default function RecordContributionForm() {
     return () => clearTimeout(timer);
   }, [memberSearch]);
 
-  const selectMember = (member: MemberResult) => {
-    setSelectedMember(member);
-    setValue("memberId", member._id);
-    setMemberSearch(member.fullName);
-    setMemberResults([]);
-    // Auto-select current period based on member's contribution type
-    setValue("periodLabel", getPeriodLabel(member.contributionType));
-  };
+  const selectMember = useCallback(
+    (member: MemberResult) => {
+      setSelectedMember(member);
+      setValue("memberId", member._id);
+      setMemberSearch(member.fullName);
+      setMemberResults([]);
+      // Auto-select current period based on member's contribution type
+      setValue("periodLabel", getPeriodLabel(member.contributionType));
+      // Prefill with the member's standard amount — freely editable per payment
+      setValue("amount", member.contributionAmount);
+    },
+    [setValue],
+  );
 
   useEffect(() => {
     if (qMember) {
@@ -133,7 +154,7 @@ export default function RecordContributionForm() {
         status: qMember.status,
       });
     }
-  }, [qMember]);
+  }, [qMember, selectMember]);
 
   // ── Periods dropdown ───────────────────────────────────────────────────────
 
@@ -245,7 +266,7 @@ export default function RecordContributionForm() {
                 </div>
                 <div className="flex gap-4 text-muted-foreground text-xs">
                   <span className="capitalize">{selectedMember.contributionType}</span>
-                  <span>৳{selectedMember.contributionAmount.toLocaleString()} / period</span>
+                  <span>Standard: ৳{selectedMember.contributionAmount.toLocaleString()}</span>
                 </div>
               </div>
             )}
@@ -266,7 +287,7 @@ export default function RecordContributionForm() {
                 control={control}
                 name="periodLabel"
                 render={({ field }) => (
-                  <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                  <Select value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger id="periodLabel">
                       <SelectValue placeholder="Select period…" />
                     </SelectTrigger>
@@ -291,6 +312,25 @@ export default function RecordContributionForm() {
             </div>
 
             <div className="space-y-1.5">
+              <Label htmlFor="amount">Amount (৳) *</Label>
+              <Input
+                id="amount"
+                type="number"
+                min={1}
+                step="any"
+                placeholder="e.g. 500"
+                {...register("amount")}
+              />
+              {selectedMember && (
+                <p className="text-xs text-muted-foreground">
+                  Standard amount: ৳{selectedMember.contributionAmount.toLocaleString()} — members
+                  can pay any amount, any number of times per period
+                </p>
+              )}
+              {errors.amount && <p className="text-xs text-destructive">{errors.amount.message}</p>}
+            </div>
+
+            <div className="space-y-1.5">
               <Label htmlFor="paidAt">Payment Date *</Label>
               <Input id="paidAt" type="date" {...register("paidAt")} />
               {errors.paidAt && <p className="text-xs text-destructive">{errors.paidAt.message}</p>}
@@ -311,14 +351,14 @@ export default function RecordContributionForm() {
         </Card>
 
         {/* Amount preview */}
-        {selectedMember && (
+        {selectedMember && Number(enteredAmount) > 0 && (
           <div className="rounded-xl bg-primary/5 border border-primary/20 px-5 py-4">
             <p className="text-xs text-muted-foreground">Amount to be recorded</p>
             <p className="text-2xl font-bold font-heading text-foreground mt-1">
-              ৳{selectedMember.contributionAmount.toLocaleString()}
+              ৳{Number(enteredAmount).toLocaleString()}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Auto-filled from {selectedMember.fullName}&apos;s member record
+              Payment by {selectedMember.fullName}
             </p>
           </div>
         )}

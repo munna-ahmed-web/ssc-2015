@@ -48,6 +48,10 @@ export interface IMember extends Document {
   exitedAt?: Date;
   suspendedAt?: Date;
 
+  // Public website visibility (members section on the home page shows only
+  // fullName + photoUrl + joinedAt; a member can be hidden on request)
+  showOnWebsite: boolean;
+
   // Audit
   approvedBy: Types.ObjectId; // User who approved the application
 
@@ -147,6 +151,11 @@ const memberSchema = new Schema<IMember>(
       type: Date,
     },
 
+    showOnWebsite: {
+      type: Boolean,
+      default: true,
+    },
+
     approvedBy: {
       type: Schema.Types.ObjectId,
       ref: "User",
@@ -173,6 +182,7 @@ memberSchema.index({ phone: 1 });
 // ─── Model (singleton — safe for Next.js hot-reload) ─────────────────────────
 
 const Member: Model<IMember> =
-  (mongoose.models.Member as Model<IMember>) ?? mongoose.model<IMember>("Member", memberSchema);
+  (mongoose.models.Member as Model<IMember> | undefined) ??
+  mongoose.model<IMember>("Member", memberSchema);
 
 export default Member;

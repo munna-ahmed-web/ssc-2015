@@ -38,7 +38,7 @@ export async function getLedger(params?: {
     totalPages: pagination?.totalPages ?? 1,
     limit: pagination?.limit ?? 25,
     page: pagination?.page ?? 1,
-    netCollected: (res.meta?.netCollected as number) ?? 0,
+    netCollected: (res.meta?.netCollected as number | undefined) ?? 0,
   };
 }
 
@@ -53,6 +53,7 @@ export async function getDefaulters(params: { periodLabel: string }): Promise<Se
 export async function recordContribution(data: {
   memberId: string;
   periodLabel: string;
+  amount: number;
   paidAt: string;
   notes?: string;
 }): Promise<SerializedContribution> {

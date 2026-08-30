@@ -249,8 +249,8 @@ export default function ReportsPage() {
                         "Frequency",
                         "Expected",
                         "Status",
-                        "Paid On",
-                        "Amount",
+                        "Last Paid",
+                        "Total Paid",
                       ].map((h) => (
                         <th
                           key={h}
@@ -314,6 +314,11 @@ export default function ReportsPage() {
                             {row.actualAmount !== null ? (
                               <span className="font-semibold text-green-700 dark:text-green-400">
                                 ৳{row.actualAmount.toLocaleString()}
+                                {row.paymentsCount > 1 && (
+                                  <span className="ml-1.5 font-normal text-xs text-muted-foreground">
+                                    ({row.paymentsCount} payments)
+                                  </span>
+                                )}
                               </span>
                             ) : (
                               <span className="text-muted-foreground">—</span>

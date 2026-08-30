@@ -167,7 +167,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Stat cards ── */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard
           title="Pending Applications"
           value={stats.pendingApplications}
@@ -190,6 +190,14 @@ export default function DashboardPage() {
           subtitle={`Period: ${stats.currentPeriodLabel}`}
           icon={Banknote}
           href="/dashboard/contributions"
+        />
+        <StatCard
+          title="Total Collected"
+          value={`৳${stats.totalCollectedAllTime.toLocaleString()}`}
+          subtitle="All-time net contributions"
+          icon={TrendingUp}
+          href="/dashboard/reports"
+          accent="success"
         />
         <StatCard
           title="Defaulters"

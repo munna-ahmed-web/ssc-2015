@@ -26,14 +26,41 @@ export async function GET(req: NextRequest) {
       .sort({ memberCode: 1 })
       .lean();
 
-    const contributions = await Contribution.find({
-      periodLabel,
-      isReversal: false,
-    })
-      .select("memberId amount paidAt notes")
-      .lean();
+    // Members may pay multiple times per period with varying amounts.
+    // Aggregate all non-reversed payments per member: total, count, last payment date.
+    const [contributions, reversals] = await Promise.all([
+      Contribution.find({ periodLabel, isReversal: false })
+        .select("memberId amount paidAt notes")
+        .lean(),
+      Contribution.find({ periodLabel, isReversal: true }).select("reversalOf").lean(),
+    ]);
 
-    const paidMap = new Map(contributions.map((c) => [c.memberId.toString(), c]));
+    const reversedIds = new Set(reversals.map((r) => r.reversalOf?.toString()).filter(Boolean));
+
+    const paidMap = new Map<
+      string,
+      { total: number; count: number; lastPaidAt: Date; notes: string | null }
+    >();
+    for (const c of contributions) {
+      if (reversedIds.has(c._id.toString())) continue;
+      const key = c.memberId.toString();
+      const entry = paidMap.get(key);
+      if (entry) {
+        entry.total += c.amount;
+        entry.count += 1;
+        if (c.paidAt > entry.lastPaidAt) {
+          entry.lastPaidAt = c.paidAt;
+          entry.notes = c.notes ?? entry.notes;
+        }
+      } else {
+        paidMap.set(key, {
+          total: c.amount,
+          count: 1,
+          lastPaidAt: c.paidAt,
+          notes: c.notes ?? null,
+        });
+      }
+    }
 
     const breakdown = activeMembers.map((m) => {
       const paid = paidMap.get(m._id.toString());
@@ -45,8 +72,9 @@ export async function GET(req: NextRequest) {
         contributionType: m.contributionType,
         expectedAmount: m.contributionAmount,
         paid: !!paid,
-        actualAmount: paid?.amount ?? null,
-        paidAt: paid?.paidAt ?? null,
+        actualAmount: paid?.total ?? null,
+        paymentsCount: paid?.count ?? 0,
+        paidAt: paid?.lastPaidAt ?? null,
         notes: paid?.notes ?? null,
       };
     });

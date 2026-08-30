@@ -2,7 +2,14 @@ import { axios } from "@/lib/http";
 import { assertApiSuccess } from "@/lib/api/client";
 import type { ApiResponse } from "@/types";
 
-import type { SerializedMember, SerializedContribution } from "../types/types";
+import type { PublicMember, SerializedMember, SerializedContribution } from "../types/types";
+
+/** Public (no-auth) list for the home page members section */
+export async function getPublicMembers(): Promise<PublicMember[]> {
+  const res = (await axios.get("/api/members/public")) as unknown as ApiResponse<PublicMember[]>;
+  assertApiSuccess(res, "Failed to fetch members");
+  return res.data;
+}
 
 export async function getMembers(params?: {
   status?: string;

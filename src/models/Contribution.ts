@@ -9,9 +9,8 @@
  *      Monthly → "YYYY-MM"      (e.g. "2026-07")
  *      Weekly  → "YYYY-WNN"     (e.g. "2026-W27")
  *    Use `getPeriodLabel()` from @/types to generate these.
- *  - Compound unique index on (memberId, periodLabel) prevents accidental duplicate
- *    entries for the same member and period. Reversal entries are exempt via a
- *    partial index filter.
+ *  - A member may pay MULTIPLE times in the same period, and each payment can be
+ *    any amount (the member's `contributionAmount` is only a suggested default).
  *  - `recordedBy` is always required — every row has a clear audit trail.
  */
 
@@ -108,16 +107,8 @@ const contributionSchema = new Schema<IContribution>(
 
 // ─── Indexes ──────────────────────────────────────────────────────────────────
 
-// Core uniqueness constraint: one confirmed contribution per member per period.
-// Reversal entries are explicitly excluded from this constraint via partial filter.
-contributionSchema.index(
-  { memberId: 1, periodLabel: 1 },
-  {
-    unique: true,
-    partialFilterExpression: { isReversal: false },
-    name: "unique_member_period_non_reversal",
-  },
-);
+// Lookups by member + period (NON-unique: multiple payments per period are allowed)
+contributionSchema.index({ memberId: 1, periodLabel: 1 });
 
 // Defaulters view: find members with no contribution for a given periodLabel
 contributionSchema.index({ periodLabel: 1, memberId: 1 });
@@ -131,7 +122,7 @@ contributionSchema.index({ paidAt: -1 });
 // ─── Model (singleton — safe for Next.js hot-reload) ─────────────────────────
 
 const Contribution: Model<IContribution> =
-  (mongoose.models.Contribution as Model<IContribution>) ??
+  (mongoose.models.Contribution as Model<IContribution> | undefined) ??
   mongoose.model<IContribution>("Contribution", contributionSchema);
 
 export default Contribution;

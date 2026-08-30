@@ -25,14 +25,19 @@ export async function GET(req: NextRequest) {
       .select("_id fullName memberCode phone contributionType contributionAmount")
       .lean();
 
-    const paidContributions = await Contribution.find({
-      periodLabel,
-      isReversal: false,
-    })
-      .select("memberId")
-      .lean();
+    // A member counts as paid if they have at least one payment this period
+    // that has NOT been reversed (members may pay multiple times per period).
+    const [paidContributions, reversals] = await Promise.all([
+      Contribution.find({ periodLabel, isReversal: false }).select("memberId").lean(),
+      Contribution.find({ periodLabel, isReversal: true }).select("reversalOf").lean(),
+    ]);
 
-    const paidSet = new Set(paidContributions.map((c) => c.memberId.toString()));
+    const reversedIds = new Set(reversals.map((r) => r.reversalOf?.toString()).filter(Boolean));
+    const paidSet = new Set(
+      paidContributions
+        .filter((c) => !reversedIds.has(c._id.toString()))
+        .map((c) => c.memberId.toString()),
+    );
     const defaulters = activeMembers.filter((m) => !paidSet.has(m._id.toString()));
 
     return apiSuccess(defaulters, {

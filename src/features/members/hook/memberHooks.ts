@@ -2,7 +2,20 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { queryClient } from "@/lib/queryClient";
 
-import { getMembers, getMember, updateMember, getMemberContributions } from "../api/members";
+import {
+  getMembers,
+  getMember,
+  getPublicMembers,
+  updateMember,
+  getMemberContributions,
+} from "../api/members";
+
+export function useFetchPublicMembers() {
+  return useQuery({
+    queryKey: ["public-members"],
+    queryFn: getPublicMembers,
+  });
+}
 
 export function useFetchMembers(params?: {
   status?: string;

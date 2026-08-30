@@ -1,3 +1,9 @@
+export interface AuditLogFilters {
+  type?: "application" | "contribution";
+  page?: number;
+  limit?: number;
+}
+
 export interface SerializedAuditLog {
   id: string;
   type: "application" | "contribution";

@@ -27,6 +27,7 @@ const UpdateMemberSchema = z.object({
   contributionType: z.enum(["weekly", "monthly"]).optional(),
   contributionAmount: z.number().min(1, "Amount must be at least 1").optional(),
   status: z.enum(["active", "suspended", "exited"]).optional(),
+  showOnWebsite: z.boolean().optional(),
 });
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -97,6 +98,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (data.photoUrl !== undefined) member.photoUrl = data.photoUrl || undefined;
     if (data.contributionType !== undefined) member.contributionType = data.contributionType;
     if (data.contributionAmount !== undefined) member.contributionAmount = data.contributionAmount;
+    if (data.showOnWebsite !== undefined) member.showOnWebsite = data.showOnWebsite;
 
     if (data.status !== undefined && data.status !== member.status) {
       member.status = data.status;

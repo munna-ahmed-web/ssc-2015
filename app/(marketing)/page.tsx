@@ -2,6 +2,7 @@ import {
   HeroSection,
   StatsSection,
   AboutSection,
+  MembersSection,
   GallerySection,
   HowItWorksSection,
   ValuesSection,
@@ -15,6 +16,7 @@ export default function HomePage() {
       <HeroSection />
       <StatsSection />
       <AboutSection />
+      <MembersSection />
       <GallerySection />
       <HowItWorksSection />
       <ValuesSection />
@@ -23,4 +25,3 @@ export default function HomePage() {
     </div>
   );
 }
-

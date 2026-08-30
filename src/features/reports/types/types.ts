@@ -6,7 +6,11 @@ export interface SerializedReportBreakdown {
   contributionType: string;
   expectedAmount: number;
   paid: boolean;
+  /** Total of all (non-reversed) payments this period */
   actualAmount: number | null;
+  /** How many separate payments the member made this period */
+  paymentsCount: number;
+  /** Date of the most recent payment */
   paidAt: string | null;
   notes: string | null;
 }

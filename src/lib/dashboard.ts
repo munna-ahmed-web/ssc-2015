@@ -6,6 +6,7 @@ export interface DashboardStats {
   pendingApplications: number;
   activeMembers: number;
   totalCollectedThisPeriod: number;
+  totalCollectedAllTime: number;
   defaultersCount: number;
   currentPeriodLabel: string;
 }
@@ -21,37 +22,56 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   // Default to monthly for the stats view
   const currentPeriodLabel = getPeriodLabel("monthly");
 
-  const [pendingApplications, activeMembers, periodContributions, activeMemberIds] =
-    await Promise.all([
-      // Pending applications count
-      MembershipApplication.countDocuments({ status: "pending" }),
+  const [
+    pendingApplications,
+    activeMembers,
+    periodContributions,
+    allTimeContributions,
+    activeMemberIds,
+  ] = await Promise.all([
+    // Pending applications count
+    MembershipApplication.countDocuments({ status: "pending" }),
 
-      // Active members count
-      Member.countDocuments({ status: "active" }),
+    // Active members count
+    Member.countDocuments({ status: "active" }),
 
-      // Sum of contributions for current period (non-reversals only)
-      Contribution.aggregate([
-        {
-          $match: {
-            periodLabel: currentPeriodLabel,
-            isReversal: false,
+    // Net collected for current period (payments minus reversals; members can
+    // pay multiple times per period)
+    Contribution.aggregate([
+      {
+        $match: {
+          periodLabel: currentPeriodLabel,
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          total: {
+            $sum: { $cond: ["$isReversal", { $multiply: ["$amount", -1] }, "$amount"] },
+          },
+          memberIds: { $addToSet: { $cond: ["$isReversal", null, "$memberId"] } },
+        },
+      },
+    ]),
+
+    // All-time net collected across every period (payments minus reversals)
+    Contribution.aggregate([
+      {
+        $group: {
+          _id: null,
+          total: {
+            $sum: { $cond: ["$isReversal", { $multiply: ["$amount", -1] }, "$amount"] },
           },
         },
-        {
-          $group: {
-            _id: null,
-            total: { $sum: "$amount" },
-            memberIds: { $addToSet: "$memberId" },
-          },
-        },
-      ]),
+      },
+    ]),
 
-      // Get all active member IDs for defaulter count
-      Member.find({ status: "active" }).select("_id").lean(),
-    ]);
+    // Get all active member IDs for defaulter count
+    Member.find({ status: "active" }).select("_id").lean(),
+  ]);
 
   // Defaulters = active members who have NO confirmed contribution this period
-  const paidMemberIds = periodContributions[0]?.memberIds ?? [];
+  const paidMemberIds = (periodContributions[0]?.memberIds ?? []).filter(Boolean);
   const allActiveMemberIds = activeMemberIds.map((m) => m._id.toString());
   const paidSet = new Set(paidMemberIds.map((id: { toString(): string }) => id.toString()));
   const defaultersCount = allActiveMemberIds.filter((id) => !paidSet.has(id)).length;
@@ -60,6 +80,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     pendingApplications,
     activeMembers,
     totalCollectedThisPeriod: periodContributions[0]?.total ?? 0,
+    totalCollectedAllTime: allTimeContributions[0]?.total ?? 0,
     defaultersCount,
     currentPeriodLabel,
   };

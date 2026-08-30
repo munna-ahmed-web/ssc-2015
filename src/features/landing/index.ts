@@ -1,9 +1,9 @@
 export { default as HeroSection } from "./HeroSection";
 export { default as StatsSection } from "./StatsSection";
 export { default as AboutSection } from "./AboutSection";
+export { default as MembersSection } from "./MembersSection";
 export { default as GallerySection } from "./GallerySection";
 export { default as HowItWorksSection } from "./HowItWorksSection";
 export { default as ValuesSection } from "./ValuesSection";
 export { default as PrinciplesSection } from "./PrinciplesSection";
 export { default as CtaSection } from "./CtaSection";
-

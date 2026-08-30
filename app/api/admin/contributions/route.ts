@@ -73,6 +73,12 @@ const RecordSchema = z.object({
   periodLabel: z
     .string()
     .regex(/^\d{4}-(0[1-9]|1[0-2])$|^\d{4}-W(0[1-9]|[1-4]\d|5[0-3])$/, "Invalid period label"),
+  // Optional: falls back to the member's standard amount (keeps older clients working)
+  amount: z
+    .number()
+    .min(1, "Amount must be at least 1")
+    .max(1_000_000, "Amount is too large")
+    .optional(),
   paidAt: z.string().optional(),
   notes: z.string().max(500).optional(),
 });
@@ -93,7 +99,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { memberId, periodLabel, paidAt, notes } = parsed.data;
+    const { memberId, periodLabel, amount, paidAt, notes } = parsed.data;
 
     if (!mongoose.isValidObjectId(memberId)) {
       return apiError("BAD_REQUEST", "Invalid member ID.", 400);
@@ -107,24 +113,12 @@ export async function POST(req: NextRequest) {
       return apiError("CONFLICT", "Cannot record contribution for a non-active member.", 409);
     }
 
-    const existing = await Contribution.findOne({
-      memberId: member._id,
-      periodLabel,
-      isReversal: false,
-    });
-    if (existing) {
-      return apiError(
-        "DUPLICATE_ENTRY",
-        `A contribution for ${member.fullName} in period ${periodLabel} already exists.`,
-        409,
-      );
-    }
-
+    // Members may pay multiple times per period, each payment any amount they choose.
     const contribution = await Contribution.create({
       memberId: member._id,
       memberName: member.fullName,
       contributionType: member.contributionType,
-      amount: member.contributionAmount,
+      amount: amount ?? member.contributionAmount,
       periodLabel,
       paidAt: paidAt ? new Date(paidAt) : new Date(),
       isReversal: false,
@@ -147,13 +141,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     if (err instanceof Response) return err;
-    if ((err as { code?: number }).code === 11000) {
-      return apiError(
-        "DUPLICATE_ENTRY",
-        "Duplicate contribution detected for this member and period.",
-        409,
-      );
-    }
     return handleRouteError(err, "[POST /api/admin/contributions]");
   }
 }

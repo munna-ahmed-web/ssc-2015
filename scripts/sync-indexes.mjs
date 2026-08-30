@@ -21,14 +21,20 @@ const userSchema = new mongoose.Schema(
     isTwoFactorEnabled: { type: Boolean, default: false },
     twoFactorSecret: { type: String, select: false },
   },
-  { timestamps: true, collection: "users" }
+  { timestamps: true, collection: "users" },
 );
 userSchema.index({ email: 1 }, { unique: true });
 
 const applicationSchema = new mongoose.Schema(
   {
-    fullName: String, guardianName: String, phone: String, email: String,
-    nid: String, address: String, dateOfBirth: Date, occupation: String,
+    fullName: String,
+    guardianName: String,
+    phone: String,
+    email: String,
+    nid: String,
+    address: String,
+    dateOfBirth: Date,
+    occupation: String,
     photoUrl: String,
     requestedContributionType: { type: String, enum: ["weekly", "monthly"] },
     requestedContributionAmount: Number,
@@ -38,7 +44,7 @@ const applicationSchema = new mongoose.Schema(
     reviewedAt: Date,
     memberId: mongoose.Schema.Types.ObjectId,
   },
-  { timestamps: true, collection: "membership_applications" }
+  { timestamps: true, collection: "membership_applications" },
 );
 applicationSchema.index({ status: 1, createdAt: -1 });
 applicationSchema.index(
@@ -47,7 +53,7 @@ applicationSchema.index(
     unique: true,
     partialFilterExpression: { status: { $in: ["pending", "approved"] } },
     name: "unique_phone_active_application",
-  }
+  },
 );
 applicationSchema.index(
   { nid: 1 },
@@ -55,23 +61,31 @@ applicationSchema.index(
     unique: true,
     partialFilterExpression: { status: { $in: ["pending", "approved"] } },
     name: "unique_nid_active_application",
-  }
+  },
 );
 
 const memberSchema = new mongoose.Schema(
   {
     applicationId: { type: mongoose.Schema.Types.ObjectId, unique: true },
     memberCode: { type: String, unique: true, uppercase: true },
-    fullName: String, guardianName: String, phone: String, email: String,
-    nid: String, address: String, dateOfBirth: Date, occupation: String, photoUrl: String,
+    fullName: String,
+    guardianName: String,
+    phone: String,
+    email: String,
+    nid: String,
+    address: String,
+    dateOfBirth: Date,
+    occupation: String,
+    photoUrl: String,
     contributionType: { type: String, enum: ["weekly", "monthly"] },
     contributionAmount: Number,
     status: { type: String, enum: ["active", "suspended", "exited"], default: "active" },
     joinedAt: { type: Date, default: () => new Date() },
-    exitedAt: Date, suspendedAt: Date,
+    exitedAt: Date,
+    suspendedAt: Date,
     approvedBy: mongoose.Schema.Types.ObjectId,
   },
-  { timestamps: true, collection: "members" }
+  { timestamps: true, collection: "members" },
 );
 memberSchema.index({ status: 1, joinedAt: -1 });
 memberSchema.index({ fullName: "text" });
@@ -90,24 +104,24 @@ const contributionSchema = new mongoose.Schema(
     recordedBy: mongoose.Schema.Types.ObjectId,
     notes: String,
   },
-  { timestamps: true, collection: "contributions" }
+  { timestamps: true, collection: "contributions" },
 );
-contributionSchema.index(
-  { memberId: 1, periodLabel: 1 },
-  { unique: true, partialFilterExpression: { isReversal: false }, name: "unique_member_period_non_reversal" }
-);
+// NON-unique: multiple payments per member per period are allowed
+contributionSchema.index({ memberId: 1, periodLabel: 1 });
 contributionSchema.index({ periodLabel: 1, memberId: 1 });
 contributionSchema.index({ memberId: 1, paidAt: -1 });
 contributionSchema.index({ paidAt: -1 });
 
 const heroImageSchema = new mongoose.Schema(
   {
-    url: String, altText: String, caption: String,
+    url: String,
+    altText: String,
+    caption: String,
     order: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true },
     uploadedBy: mongoose.Schema.Types.ObjectId,
   },
-  { timestamps: true, collection: "hero_images" }
+  { timestamps: true, collection: "hero_images" },
 );
 heroImageSchema.index({ isActive: 1, order: 1 });
 
@@ -115,7 +129,9 @@ heroImageSchema.index({ isActive: 1, order: 1 });
 
 const models = {
   User: mongoose.models.User ?? mongoose.model("User", userSchema),
-  MembershipApplication: mongoose.models.MembershipApplication ?? mongoose.model("MembershipApplication", applicationSchema),
+  MembershipApplication:
+    mongoose.models.MembershipApplication ??
+    mongoose.model("MembershipApplication", applicationSchema),
   Member: mongoose.models.Member ?? mongoose.model("Member", memberSchema),
   Contribution: mongoose.models.Contribution ?? mongoose.model("Contribution", contributionSchema),
   HeroImage: mongoose.models.HeroImage ?? mongoose.model("HeroImage", heroImageSchema),
@@ -134,7 +150,9 @@ async function main() {
     const indexes = await model.listIndexes();
     console.log(`  ✅ ${name} (${model.collection.collectionName}) — ${indexes.length} index(es):`);
     for (const idx of indexes) {
-      console.log(`     • ${JSON.stringify(idx.key)}${idx.unique ? " [unique]" : ""}${idx.partialFilterExpression ? " [partial]" : ""}`);
+      console.log(
+        `     • ${JSON.stringify(idx.key)}${idx.unique ? " [unique]" : ""}${idx.partialFilterExpression ? " [partial]" : ""}`,
+      );
     }
   }
 
