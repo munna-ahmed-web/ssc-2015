@@ -6,7 +6,6 @@ import { z } from "zod";
 import { connectDB } from "@/lib/db";
 import { Member, MemberLoginToken } from "@/models";
 import { sendMemberMagicLink } from "@/lib/email";
-import { getEnv } from "@/lib/utils";
 import { apiError, apiSuccess, handleRouteError } from "@/lib/api/response";
 
 const RequestSchema = z.object({
@@ -75,7 +74,10 @@ export async function POST(req: NextRequest) {
       expiresAt: new Date(Date.now() + TOKEN_TTL_MS),
     });
 
-    const baseUrl = getEnv("NEXT_PUBLIC_API_ROOT_URL") || "http://localhost:3000";
+    // Build the link from the request's own origin so it is automatically
+    // correct in every environment (localhost in dev, the real domain in
+    // production) with no env change needed on deploy.
+    const baseUrl = req.nextUrl.origin;
     const url = `${baseUrl}/member/verify?token=${rawToken}`;
     await sendMemberMagicLink(member.email, member.fullName, url);
 
