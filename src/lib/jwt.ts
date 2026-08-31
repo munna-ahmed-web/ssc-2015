@@ -46,11 +46,11 @@ export function verifyAccessToken(token: string): TokenPayload {
 
 // ─── Member Portal Token ──────────────────────────────────────────────────────
 
-/** Member-portal session lifetime (long-lived; login is via emailed magic link). */
-const MEMBER_EXPIRES_IN = process.env.JWT_MEMBER_EXPIRES_IN ?? "90d";
+/** Member-portal session lifetime (login is via emailed magic link). */
+const MEMBER_EXPIRES_IN = process.env.JWT_MEMBER_EXPIRES_IN ?? "1h";
 
 /**
- * Long-lived read-only session token for the member portal.
+ * Read-only session token for the member portal.
  * `sub` is a Member _id (NOT a User _id) and `role` is always "member",
  * so `requireAdmin()` rejects it everywhere by construction.
  */

@@ -13,8 +13,8 @@ import { parseBearerToken } from "./auth/constants";
 /** httpOnly cookie holding the member-portal session token. */
 export const COOKIE_MEMBER = "member_token";
 
-/** Member-portal session lifetime in seconds (90 days). */
-export const MEMBER_MAX_AGE = 90 * 24 * 60 * 60;
+/** Member-portal session cookie lifetime in seconds (keep in sync with JWT_MEMBER_EXPIRES_IN). */
+export const MEMBER_MAX_AGE = 60 * 60; // 1 hour
 
 export {
   COOKIE_ACCESS,
