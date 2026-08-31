@@ -3,9 +3,7 @@ import mongoose from "mongoose";
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
-  throw new Error(
-    "Please define the MONGODB_URI environment variable in .env.local"
-  );
+  throw new Error("Please define the MONGODB_URI environment variable in .env.local");
 }
 
 /**
@@ -19,7 +17,6 @@ interface MongooseCache {
 
 // Extend the global object to hold the cached connection.
 declare global {
-  // eslint-disable-next-line no-var
   var _mongooseCache: MongooseCache | undefined;
 }
 
@@ -41,6 +38,11 @@ export async function connectDB(): Promise<typeof mongoose> {
   if (!cached.promise) {
     const opts: mongoose.ConnectOptions = {
       bufferCommands: false, // Fail fast instead of queuing commands while disconnected.
+      // The app never creates indexes — scripts/sync-indexes.mjs is the single
+      // authority. This prevents stale deployments (old schemas) from silently
+      // re-creating dropped indexes on cold start, which once resurrected the
+      // removed one-payment-per-period unique constraint.
+      autoIndex: false,
     };
 
     cached.promise = mongoose.connect(MONGODB_URI!, opts);
