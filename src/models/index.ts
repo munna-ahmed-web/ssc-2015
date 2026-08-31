@@ -13,6 +13,7 @@ export { default as AuditLog } from "./AuditLog";
 export { default as Contribution } from "./Contribution";
 export { default as GalleryImage } from "./GalleryImage";
 export { default as HeroImage } from "./HeroImage";
+export { default as Investment } from "./Investment";
 export { default as Member } from "./Member";
 export { default as MemberLoginToken } from "./MemberLoginToken";
 export { default as MembershipApplication } from "./MembershipApplication";
@@ -24,6 +25,7 @@ export type { AuditAction, AuditEntityType, IAuditLog } from "./AuditLog";
 export type { IContribution } from "./Contribution";
 export type { IGalleryImage } from "./GalleryImage";
 export type { IHeroImage } from "./HeroImage";
+export type { IInvestment, IProfitAllocation, InvestmentStatus } from "./Investment";
 export type { IMember, MemberStatus } from "./Member";
 export type { IMemberLoginToken } from "./MemberLoginToken";
 export type {

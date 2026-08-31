@@ -7,6 +7,7 @@ import {
   ClipboardList,
   Users,
   Banknote,
+  Briefcase,
   BarChart3,
   ImagePlay,
   Images,
@@ -41,6 +42,11 @@ const NAV_ITEMS = [
     label: "Contributions",
     href: "/dashboard/contributions",
     icon: Banknote,
+  },
+  {
+    label: "Investments",
+    href: "/dashboard/investments",
+    icon: Briefcase,
   },
   {
     label: "Reports",

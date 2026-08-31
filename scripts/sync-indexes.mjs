@@ -112,6 +112,29 @@ contributionSchema.index({ periodLabel: 1, memberId: 1 });
 contributionSchema.index({ memberId: 1, paidAt: -1 });
 contributionSchema.index({ paidAt: -1 });
 
+const investmentSchema = new mongoose.Schema(
+  {
+    title: String,
+    description: String,
+    principal: Number,
+    expectedReturnDate: Date,
+    status: { type: String, enum: ["pending", "active", "rejected", "closed"], default: "pending" },
+    proposedBy: mongoose.Schema.Types.ObjectId,
+    approvedBy: mongoose.Schema.Types.ObjectId,
+    approvedAt: Date,
+    rejectedBy: mongoose.Schema.Types.ObjectId,
+    rejectedAt: Date,
+    rejectedReason: String,
+    closedBy: mongoose.Schema.Types.ObjectId,
+    closedAt: Date,
+    returnedAmount: Number,
+    profitAllocations: [{ purpose: String, amount: Number }],
+  },
+  { timestamps: true, collection: "investments" },
+);
+investmentSchema.index({ status: 1, createdAt: -1 });
+investmentSchema.index({ createdAt: -1 });
+
 const heroImageSchema = new mongoose.Schema(
   {
     url: String,
@@ -134,6 +157,7 @@ const models = {
     mongoose.model("MembershipApplication", applicationSchema),
   Member: mongoose.models.Member ?? mongoose.model("Member", memberSchema),
   Contribution: mongoose.models.Contribution ?? mongoose.model("Contribution", contributionSchema),
+  Investment: mongoose.models.Investment ?? mongoose.model("Investment", investmentSchema),
   HeroImage: mongoose.models.HeroImage ?? mongoose.model("HeroImage", heroImageSchema),
 };
 

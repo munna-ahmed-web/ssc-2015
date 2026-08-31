@@ -44,6 +44,10 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   "gallery_image.upload": "Uploaded gallery image",
   "gallery_image.update": "Updated gallery image",
   "gallery_image.delete": "Deleted gallery image",
+  "investment.propose": "Proposed investment",
+  "investment.approve": "Approved investment",
+  "investment.reject": "Rejected investment",
+  "investment.close": "Closed investment",
   "auth.login": "Logged in",
 };
 
@@ -54,6 +58,7 @@ export const ENTITY_TYPE_LABELS: Record<AuditEntityType, string> = {
   application: "Applications",
   hero_image: "Hero Images",
   gallery_image: "Gallery Images",
+  investment: "Investments",
   auth: "Logins",
 };
 
@@ -64,5 +69,6 @@ export const ENTITY_TYPE_BADGE_CLASSES: Record<AuditEntityType, string> = {
   application: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
   hero_image: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
   gallery_image: "bg-pink-500/10 text-pink-600 dark:text-pink-400",
+  investment: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400",
   auth: "bg-slate-500/10 text-slate-600 dark:text-slate-400",
 };

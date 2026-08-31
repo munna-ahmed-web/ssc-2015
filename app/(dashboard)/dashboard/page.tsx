@@ -6,6 +6,8 @@ import {
   ClipboardList,
   Users,
   Banknote,
+  Briefcase,
+  Wallet,
   AlertTriangle,
   TrendingUp,
   ArrowRight,
@@ -167,7 +169,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Stat cards ── */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         <StatCard
           title="Pending Applications"
           value={stats.pendingApplications}
@@ -198,6 +200,21 @@ export default function DashboardPage() {
           icon={TrendingUp}
           href="/dashboard/reports"
           accent="success"
+        />
+        <StatCard
+          title="Available Balance"
+          value={`৳${stats.availableBalance.toLocaleString()}`}
+          subtitle="Spendable / investable now"
+          icon={Wallet}
+          href="/dashboard/investments"
+          accent="success"
+        />
+        <StatCard
+          title="Currently Invested"
+          value={`৳${stats.currentlyInvested.toLocaleString()}`}
+          subtitle="Out working in active investments"
+          icon={Briefcase}
+          href="/dashboard/investments?status=active"
         />
         <StatCard
           title="Defaulters"

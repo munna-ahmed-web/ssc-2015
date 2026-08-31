@@ -30,6 +30,10 @@ export const AUDIT_ACTIONS = [
   "gallery_image.upload",
   "gallery_image.update",
   "gallery_image.delete",
+  "investment.propose",
+  "investment.approve",
+  "investment.reject",
+  "investment.close",
   "auth.login",
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -40,6 +44,7 @@ export const AUDIT_ENTITY_TYPES = [
   "application",
   "hero_image",
   "gallery_image",
+  "investment",
   "auth",
 ] as const;
 export type AuditEntityType = (typeof AUDIT_ENTITY_TYPES)[number];

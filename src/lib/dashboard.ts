@@ -1,5 +1,6 @@
 import { connectDB } from "@/lib/db";
 import { MembershipApplication, Member, Contribution } from "@/models";
+import { getFundBalance } from "@/lib/fundBalance";
 import { getPeriodLabel } from "@/types";
 
 export interface DashboardStats {
@@ -7,6 +8,8 @@ export interface DashboardStats {
   activeMembers: number;
   totalCollectedThisPeriod: number;
   totalCollectedAllTime: number;
+  availableBalance: number;
+  currentlyInvested: number;
   defaultersCount: number;
   currentPeriodLabel: string;
 }
@@ -22,53 +25,39 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   // Default to monthly for the stats view
   const currentPeriodLabel = getPeriodLabel("monthly");
 
-  const [
-    pendingApplications,
-    activeMembers,
-    periodContributions,
-    allTimeContributions,
-    activeMemberIds,
-  ] = await Promise.all([
-    // Pending applications count
-    MembershipApplication.countDocuments({ status: "pending" }),
+  const [pendingApplications, activeMembers, periodContributions, fund, activeMemberIds] =
+    await Promise.all([
+      // Pending applications count
+      MembershipApplication.countDocuments({ status: "pending" }),
 
-    // Active members count
-    Member.countDocuments({ status: "active" }),
+      // Active members count
+      Member.countDocuments({ status: "active" }),
 
-    // Net collected for current period (payments minus reversals; members can
-    // pay multiple times per period)
-    Contribution.aggregate([
-      {
-        $match: {
-          periodLabel: currentPeriodLabel,
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          total: {
-            $sum: { $cond: ["$isReversal", { $multiply: ["$amount", -1] }, "$amount"] },
-          },
-          memberIds: { $addToSet: { $cond: ["$isReversal", null, "$memberId"] } },
-        },
-      },
-    ]),
-
-    // All-time net collected across every period (payments minus reversals)
-    Contribution.aggregate([
-      {
-        $group: {
-          _id: null,
-          total: {
-            $sum: { $cond: ["$isReversal", { $multiply: ["$amount", -1] }, "$amount"] },
+      // Net collected for current period (payments minus reversals; members can
+      // pay multiple times per period)
+      Contribution.aggregate([
+        {
+          $match: {
+            periodLabel: currentPeriodLabel,
           },
         },
-      },
-    ]),
+        {
+          $group: {
+            _id: null,
+            total: {
+              $sum: { $cond: ["$isReversal", { $multiply: ["$amount", -1] }, "$amount"] },
+            },
+            memberIds: { $addToSet: { $cond: ["$isReversal", null, "$memberId"] } },
+          },
+        },
+      ]),
 
-    // Get all active member IDs for defaulter count
-    Member.find({ status: "active" }).select("_id").lean(),
-  ]);
+      // Fund balance breakdown (net contributions, investments, available balance)
+      getFundBalance(),
+
+      // Get all active member IDs for defaulter count
+      Member.find({ status: "active" }).select("_id").lean(),
+    ]);
 
   // Defaulters = active members who have NO confirmed contribution this period
   const paidMemberIds = (periodContributions[0]?.memberIds ?? []).filter(Boolean);
@@ -80,7 +69,9 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     pendingApplications,
     activeMembers,
     totalCollectedThisPeriod: periodContributions[0]?.total ?? 0,
-    totalCollectedAllTime: allTimeContributions[0]?.total ?? 0,
+    totalCollectedAllTime: fund.netContributions,
+    availableBalance: fund.availableBalance,
+    currentlyInvested: fund.currentlyInvested,
     defaultersCount,
     currentPeriodLabel,
   };
