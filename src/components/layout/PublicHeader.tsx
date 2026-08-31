@@ -68,6 +68,12 @@ export default function PublicHeader() {
         {/* Desktop CTA */}
         <div className="hidden md:flex items-center gap-3">
           <Link
+            href="/member"
+            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Member Login
+          </Link>
+          <Link
             href="/login"
             className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
@@ -108,6 +114,13 @@ export default function PublicHeader() {
             </Link>
           ))}
           <div className="pt-2 border-t border-border mt-2 flex flex-col gap-2">
+            <Link
+              href="/member"
+              onClick={closeMenu}
+              className="block px-4 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+            >
+              Member Login
+            </Link>
             <Link
               href="/login"
               onClick={closeMenu}

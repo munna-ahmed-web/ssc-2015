@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Wallet } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -83,6 +83,17 @@ export default function HeroSection() {
             <Button asChild size="lg" className="gap-2 shadow-lg shadow-primary/10">
               <Link href="/become-a-member">
                 Become a Member <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              size="lg"
+              className="gap-2 border-input text-foreground hover:bg-accent hover:text-accent-foreground"
+            >
+              <Link href="/member">
+                <Wallet className="size-4" />
+                My Contributions
               </Link>
             </Button>
             <Button
