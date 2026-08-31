@@ -86,6 +86,12 @@ export async function authResponseInterceptor(
     throw error;
   }
 
+  // Member-portal endpoints use their own cookie session and login page —
+  // the admin token refresh + /login redirect must not hijack their 401s.
+  if (originalRequest.url?.startsWith("/api/member/")) {
+    throw error;
+  }
+
   if (isRefreshing) {
     return new Promise<string>((resolve, reject) => {
       failedQueue.push({ resolve, reject });
