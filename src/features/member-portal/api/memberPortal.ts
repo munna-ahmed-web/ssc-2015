@@ -3,6 +3,8 @@ import { assertApiSuccess } from "@/lib/api/client";
 import type { ApiResponse } from "@/types";
 
 import type {
+  MyContributionFilters,
+  MyContributionSummary,
   SerializedMemberProfile,
   SerializedMyContribution,
   SerializedMemberStats,
@@ -37,9 +39,9 @@ export async function getMyProfile(): Promise<SerializedMemberProfile> {
   return res.data;
 }
 
-export async function getMyContributions(params?: { page?: number; limit?: number }): Promise<{
+export async function getMyContributions(params?: MyContributionFilters): Promise<{
   contributions: SerializedMyContribution[];
-  myTotalPaid: number;
+  summary: MyContributionSummary;
   total: number;
   totalPages: number;
   page: number;
@@ -50,13 +52,24 @@ export async function getMyContributions(params?: { page?: number; limit?: numbe
   })) as unknown as ApiResponse<SerializedMyContribution[]>;
   assertApiSuccess(res, "Failed to load your contributions");
 
-  const pagination = res.meta?.pagination as
+  const meta = (res.meta ?? {}) as Record<string, unknown>;
+  const pagination = meta.pagination as
     | { page: number; limit: number; total: number; totalPages: number }
     | undefined;
 
   return {
     contributions: res.data,
-    myTotalPaid: (res.meta?.myTotalPaid as number | undefined) ?? 0,
+    summary: {
+      myTotalPaid: (meta.myTotalPaid as number | undefined) ?? 0,
+      paymentsCount: (meta.paymentsCount as number | undefined) ?? 0,
+      lastPaidAt: (meta.lastPaidAt as string | null | undefined) ?? null,
+      thisYearTotal: (meta.thisYearTotal as number | undefined) ?? 0,
+      yearlyBreakdown:
+        (meta.yearlyBreakdown as MyContributionSummary["yearlyBreakdown"] | undefined) ?? [],
+      availableYears: (meta.availableYears as number[] | undefined) ?? [],
+      currentPeriodLabel: (meta.currentPeriodLabel as string | undefined) ?? "",
+      currentPeriodPaid: (meta.currentPeriodPaid as boolean | undefined) ?? false,
+    },
     total: pagination?.total ?? 0,
     totalPages: pagination?.totalPages ?? 1,
     page: pagination?.page ?? 1,

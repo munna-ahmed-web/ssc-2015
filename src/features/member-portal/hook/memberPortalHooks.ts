@@ -8,6 +8,7 @@ import {
   getMyContributions,
   getMemberStats,
 } from "../api/memberPortal";
+import type { MyContributionFilters } from "../types/types";
 
 export function useRequestLoginLink() {
   return useMutation({ mutationFn: requestLoginLink });
@@ -29,7 +30,7 @@ export function useFetchMyProfile() {
   });
 }
 
-export function useFetchMyContributions(params?: { page?: number; limit?: number }) {
+export function useFetchMyContributions(params?: MyContributionFilters) {
   return useQuery({
     queryKey: ["member-portal-contributions", params],
     queryFn: () => getMyContributions(params),

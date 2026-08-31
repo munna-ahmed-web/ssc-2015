@@ -27,7 +27,7 @@ function VerifyContent() {
 
     verify(token, {
       onSuccess: () => {
-        router.replace("/member");
+        router.replace("/member/statistics");
       },
       onError: (err) => {
         setError(err instanceof Error ? err.message : "This login link is invalid or has expired.");

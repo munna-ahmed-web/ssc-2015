@@ -13,7 +13,9 @@ export async function GET() {
     await connectDB();
 
     const member = await Member.findById(session.sub)
-      .select("fullName memberCode photoUrl contributionType contributionAmount status joinedAt")
+      .select(
+        "fullName memberCode photoUrl contributionType contributionAmount status joinedAt guardianName phone",
+      )
       .lean();
     if (!member) {
       return apiError("UNAUTHORIZED", "Member account not found.", 401);
