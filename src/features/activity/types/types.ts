@@ -53,6 +53,12 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   "loan.reject": "Rejected loan",
   "loan.repayment": "Recorded loan repayment",
   "loan.write_off": "Wrote off loan",
+  "club.collection_add": "Recorded club collection",
+  "club.collection_delete": "Deleted club collection",
+  "club.expense_add": "Recorded club expense",
+  "club.expense_delete": "Deleted club expense",
+  "club.contributor_add": "Added club contributor",
+  "club.contributor_update": "Updated club contributor",
   "auth.login": "Logged in",
 };
 
@@ -65,6 +71,7 @@ export const ENTITY_TYPE_LABELS: Record<AuditEntityType, string> = {
   gallery_image: "Gallery Images",
   investment: "Investments",
   loan: "Loans",
+  club: "Club Room",
   auth: "Logins",
 };
 
@@ -77,5 +84,6 @@ export const ENTITY_TYPE_BADGE_CLASSES: Record<AuditEntityType, string> = {
   gallery_image: "bg-pink-500/10 text-pink-600 dark:text-pink-400",
   investment: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400",
   loan: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
+  club: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
   auth: "bg-slate-500/10 text-slate-600 dark:text-slate-400",
 };

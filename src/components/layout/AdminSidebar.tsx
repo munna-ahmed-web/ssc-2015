@@ -12,6 +12,7 @@ import {
   BarChart3,
   ImagePlay,
   Images,
+  DoorOpen,
   History,
   Settings,
   Heart,
@@ -68,6 +69,11 @@ const NAV_ITEMS = [
     label: "Gallery Images",
     href: "/dashboard/gallery-images",
     icon: Images,
+  },
+  {
+    label: "Club Room",
+    href: "/dashboard/club",
+    icon: DoorOpen,
   },
   {
     label: "Activity Log",

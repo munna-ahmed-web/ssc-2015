@@ -10,6 +10,9 @@
  */
 
 export { default as AuditLog } from "./AuditLog";
+export { default as ClubCollection } from "./ClubCollection";
+export { default as ClubContributor } from "./ClubContributor";
+export { default as ClubExpense } from "./ClubExpense";
 export { default as Contribution } from "./Contribution";
 export { default as GalleryImage } from "./GalleryImage";
 export { default as HeroImage } from "./HeroImage";
@@ -23,6 +26,9 @@ export { default as User } from "./User";
 // Re-export interfaces for convenient typing
 export { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "./AuditLog";
 export type { AuditAction, AuditEntityType, IAuditLog } from "./AuditLog";
+export type { IClubCollection } from "./ClubCollection";
+export type { IClubContributor } from "./ClubContributor";
+export type { IClubExpense } from "./ClubExpense";
 export type { IContribution } from "./Contribution";
 export type { IGalleryImage } from "./GalleryImage";
 export type { IHeroImage } from "./HeroImage";

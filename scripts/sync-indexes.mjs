@@ -168,6 +168,40 @@ loanSchema.index({ status: 1, createdAt: -1 });
 loanSchema.index({ status: 1, expectedReturnDate: 1 });
 loanSchema.index({ borrowerMemberId: 1, createdAt: -1 });
 
+const clubContributorSchema = new mongoose.Schema(
+  { name: String, phone: String, isActive: { type: Boolean, default: true } },
+  { timestamps: true, collection: "club_contributors" },
+);
+clubContributorSchema.index({ isActive: 1, name: 1 });
+
+const clubCollectionSchema = new mongoose.Schema(
+  {
+    contributorId: mongoose.Schema.Types.ObjectId,
+    contributorName: String,
+    amount: Number,
+    periodLabel: String,
+    paidAt: Date,
+    notes: String,
+    recordedBy: mongoose.Schema.Types.ObjectId,
+  },
+  { timestamps: true, collection: "club_collections" },
+);
+clubCollectionSchema.index({ periodLabel: 1, paidAt: -1 });
+clubCollectionSchema.index({ contributorId: 1, periodLabel: 1 });
+
+const clubExpenseSchema = new mongoose.Schema(
+  {
+    title: String,
+    amount: Number,
+    periodLabel: String,
+    spentAt: Date,
+    notes: String,
+    recordedBy: mongoose.Schema.Types.ObjectId,
+  },
+  { timestamps: true, collection: "club_expenses" },
+);
+clubExpenseSchema.index({ periodLabel: 1, spentAt: -1 });
+
 const heroImageSchema = new mongoose.Schema(
   {
     url: String,
@@ -192,6 +226,11 @@ const models = {
   Contribution: mongoose.models.Contribution ?? mongoose.model("Contribution", contributionSchema),
   Investment: mongoose.models.Investment ?? mongoose.model("Investment", investmentSchema),
   Loan: mongoose.models.Loan ?? mongoose.model("Loan", loanSchema),
+  ClubContributor:
+    mongoose.models.ClubContributor ?? mongoose.model("ClubContributor", clubContributorSchema),
+  ClubCollection:
+    mongoose.models.ClubCollection ?? mongoose.model("ClubCollection", clubCollectionSchema),
+  ClubExpense: mongoose.models.ClubExpense ?? mongoose.model("ClubExpense", clubExpenseSchema),
   HeroImage: mongoose.models.HeroImage ?? mongoose.model("HeroImage", heroImageSchema),
 };
 
