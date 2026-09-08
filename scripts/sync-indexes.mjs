@@ -135,6 +135,39 @@ const investmentSchema = new mongoose.Schema(
 investmentSchema.index({ status: 1, createdAt: -1 });
 investmentSchema.index({ createdAt: -1 });
 
+const loanSchema = new mongoose.Schema(
+  {
+    borrowerName: String,
+    borrowerMemberId: mongoose.Schema.Types.ObjectId,
+    borrowerPhone: String,
+    purpose: String,
+    principal: Number,
+    expectedReturnDate: Date,
+    status: {
+      type: String,
+      enum: ["pending", "active", "rejected", "recovered", "written_off"],
+      default: "pending",
+    },
+    proposedBy: mongoose.Schema.Types.ObjectId,
+    approvedBy: mongoose.Schema.Types.ObjectId,
+    approvedAt: Date,
+    rejectedBy: mongoose.Schema.Types.ObjectId,
+    rejectedAt: Date,
+    rejectedReason: String,
+    repayments: [
+      { amount: Number, paidAt: Date, receivedBy: mongoose.Schema.Types.ObjectId, notes: String },
+    ],
+    recoveredAt: Date,
+    writtenOffBy: mongoose.Schema.Types.ObjectId,
+    writtenOffAt: Date,
+    writeOffReason: String,
+  },
+  { timestamps: true, collection: "loans" },
+);
+loanSchema.index({ status: 1, createdAt: -1 });
+loanSchema.index({ status: 1, expectedReturnDate: 1 });
+loanSchema.index({ borrowerMemberId: 1, createdAt: -1 });
+
 const heroImageSchema = new mongoose.Schema(
   {
     url: String,
@@ -158,6 +191,7 @@ const models = {
   Member: mongoose.models.Member ?? mongoose.model("Member", memberSchema),
   Contribution: mongoose.models.Contribution ?? mongoose.model("Contribution", contributionSchema),
   Investment: mongoose.models.Investment ?? mongoose.model("Investment", investmentSchema),
+  Loan: mongoose.models.Loan ?? mongoose.model("Loan", loanSchema),
   HeroImage: mongoose.models.HeroImage ?? mongoose.model("HeroImage", heroImageSchema),
 };
 

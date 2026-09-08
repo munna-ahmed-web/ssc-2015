@@ -3,18 +3,21 @@
  * foundation actually have available".
  *
  *   availableBalance = netContributions
- *                    − currentlyInvested                  (active principal out working)
- *                    + investmentNetResult                (closed: returned − principal − external allocations)
+ *                    − currentlyInvested            (active investment principal, out working)
+ *                    + investmentNetResult          (closed: returned − principal − external allocations)
+ *                    − outstandingLoanPrincipal     (interest-free money lent, not yet repaid)
+ *                    − totalLoansWrittenOff         (lent money accepted as unrecoverable)
  *
- * FUTURE (money-lending system — interest-free loans to members/institutions):
- * add ONE aggregate here computing `outstandingLoanPrincipal` (Σ disbursed −
- * Σ recovered), add the field to FundBalanceBreakdown, and subtract it in
- * `availableBalance`. Every consumer reads this breakdown object, so no other
- * code changes. Do not fork balance math anywhere else.
+ * Loans are interest-free: the borrower repays exactly the principal, so a loan
+ * never produces profit — only an outstanding balance while the money is out,
+ * and a permanent reduction of the fund if it is written off.
+ *
+ * This is the single balance authority. Any future money-out feature should add
+ * its aggregate here rather than forking the math elsewhere.
  */
 
 import { connectDB } from "@/lib/db";
-import { Contribution, Investment } from "@/models";
+import { Contribution, Investment, Loan } from "@/models";
 
 export interface FundBalanceBreakdown {
   /** Σ contributions, reversal-aware (payments minus reversals) */
@@ -29,14 +32,20 @@ export interface FundBalanceBreakdown {
   totalLossIncurred: number;
   /** Σ of all profit allocations that left the fund (social work, expenses, …) */
   totalExternallyAllocated: number;
-  /** What the foundation can spend or invest right now */
+  /** Σ principal still owed on active loans (lent out, not yet repaid) */
+  outstandingLoanPrincipal: number;
+  /** Σ unrecovered principal on written-off loans (permanently lost) */
+  totalLoansWrittenOff: number;
+  /** Σ repayments received across all loans */
+  totalLoanRepaid: number;
+  /** What the foundation can spend, invest or lend right now */
   availableBalance: number;
 }
 
 export async function getFundBalance(): Promise<FundBalanceBreakdown> {
   await connectDB();
 
-  const [contributionAgg, investmentAgg] = await Promise.all([
+  const [contributionAgg, investmentAgg, loanAgg] = await Promise.all([
     Contribution.aggregate([
       {
         $group: {
@@ -74,6 +83,23 @@ export async function getFundBalance(): Promise<FundBalanceBreakdown> {
         },
       },
     ]),
+    Loan.aggregate([
+      { $match: { status: { $in: ["active", "recovered", "written_off"] } } },
+      {
+        $project: {
+          status: 1,
+          principal: 1,
+          repaidTotal: { $sum: "$repayments.amount" },
+        },
+      },
+      {
+        $group: {
+          _id: "$status",
+          principalTotal: { $sum: "$principal" },
+          repaidTotal: { $sum: "$repaidTotal" },
+        },
+      },
+    ]),
   ]);
 
   const netContributions = contributionAgg[0]?.net ?? 0;
@@ -86,6 +112,23 @@ export async function getFundBalance(): Promise<FundBalanceBreakdown> {
     ? closed.returnedTotal - closed.principalTotal - closed.allocatedTotal
     : 0;
 
+  const activeLoans = loanAgg.find((g) => g._id === "active");
+  const recoveredLoans = loanAgg.find((g) => g._id === "recovered");
+  const writtenOffLoans = loanAgg.find((g) => g._id === "written_off");
+
+  // Active loans: only the not-yet-repaid part is still out of the fund
+  const outstandingLoanPrincipal = activeLoans
+    ? activeLoans.principalTotal - activeLoans.repaidTotal
+    : 0;
+  // Written off: whatever was never repaid is gone for good
+  const totalLoansWrittenOff = writtenOffLoans
+    ? writtenOffLoans.principalTotal - writtenOffLoans.repaidTotal
+    : 0;
+  const totalLoanRepaid =
+    (activeLoans?.repaidTotal ?? 0) +
+    (recoveredLoans?.repaidTotal ?? 0) +
+    (writtenOffLoans?.repaidTotal ?? 0);
+
   return {
     netContributions,
     currentlyInvested,
@@ -93,6 +136,14 @@ export async function getFundBalance(): Promise<FundBalanceBreakdown> {
     totalProfitEarned: closed?.profitTotal ?? 0,
     totalLossIncurred: closed?.lossTotal ?? 0,
     totalExternallyAllocated: closed?.allocatedTotal ?? 0,
-    availableBalance: netContributions - currentlyInvested + investmentNetResult,
+    outstandingLoanPrincipal,
+    totalLoansWrittenOff,
+    totalLoanRepaid,
+    availableBalance:
+      netContributions -
+      currentlyInvested +
+      investmentNetResult -
+      outstandingLoanPrincipal -
+      totalLoansWrittenOff,
   };
 }

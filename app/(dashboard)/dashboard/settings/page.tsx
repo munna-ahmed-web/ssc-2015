@@ -2,13 +2,24 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Shield, Key, History, FileText, Banknote, User, Loader2, AlertCircle } from "lucide-react";
+import {
+  Shield,
+  Key,
+  History,
+  FileText,
+  Banknote,
+  User,
+  Loader2,
+  AlertCircle,
+  KeyRound,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useFetchAdminProfile, useFetchAuditLogs } from "@/features/settings/hook/settingsHooks";
+import ChangePasswordDialog from "@/features/settings/ChangePasswordDialog";
 
 const LOGS_PER_PAGE = 10;
 
@@ -28,6 +39,7 @@ export default function SettingsPage() {
     error: adminError,
   } = useFetchAdminProfile();
 
+  const [passwordOpen, setPasswordOpen] = useState(false);
   const [logFilter, setLogFilter] = useState<LogFilterValue>("");
   const [logPage, setLogPage] = useState(1);
 
@@ -157,6 +169,16 @@ export default function SettingsPage() {
                   Session Expiry: <span className="font-semibold text-foreground">15 Minutes</span>
                 </span>
               </div>
+              <Separator />
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2"
+                onClick={() => setPasswordOpen(true)}
+              >
+                <KeyRound className="size-4" />
+                Change Password
+              </Button>
             </CardContent>
           </Card>
         </div>
@@ -308,6 +330,8 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <ChangePasswordDialog open={passwordOpen} onClose={() => setPasswordOpen(false)} />
     </div>
   );
 }

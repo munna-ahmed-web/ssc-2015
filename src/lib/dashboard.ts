@@ -10,6 +10,7 @@ export interface DashboardStats {
   totalCollectedAllTime: number;
   availableBalance: number;
   currentlyInvested: number;
+  outstandingLoanPrincipal: number;
   defaultersCount: number;
   currentPeriodLabel: string;
 }
@@ -72,6 +73,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     totalCollectedAllTime: fund.netContributions,
     availableBalance: fund.availableBalance,
     currentlyInvested: fund.currentlyInvested,
+    outstandingLoanPrincipal: fund.outstandingLoanPrincipal,
     defaultersCount,
     currentPeriodLabel,
   };

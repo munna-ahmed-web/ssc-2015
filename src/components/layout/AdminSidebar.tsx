@@ -8,6 +8,7 @@ import {
   Users,
   Banknote,
   Briefcase,
+  HandCoins,
   BarChart3,
   ImagePlay,
   Images,
@@ -47,6 +48,11 @@ const NAV_ITEMS = [
     label: "Investments",
     href: "/dashboard/investments",
     icon: Briefcase,
+  },
+  {
+    label: "Loans",
+    href: "/dashboard/loans",
+    icon: HandCoins,
   },
   {
     label: "Reports",

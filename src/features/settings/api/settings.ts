@@ -36,3 +36,13 @@ export async function getAuditLogs(params?: AuditLogFilters): Promise<{
     limit: pagination?.limit ?? 10,
   };
 }
+
+export async function changePassword(data: {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}): Promise<string> {
+  const res = (await axios.post("/api/auth/change-password", data)) as unknown as ApiResponse<null>;
+  assertApiSuccess(res, "Failed to change password");
+  return res.message ?? "Password changed successfully.";
+}

@@ -7,6 +7,7 @@ import {
   Users,
   Banknote,
   Briefcase,
+  HandCoins,
   Wallet,
   AlertTriangle,
   TrendingUp,
@@ -215,6 +216,13 @@ export default function DashboardPage() {
           subtitle="Out working in active investments"
           icon={Briefcase}
           href="/dashboard/investments?status=active"
+        />
+        <StatCard
+          title="Lent Out"
+          value={`৳${stats.outstandingLoanPrincipal.toLocaleString()}`}
+          subtitle="Owed back on active loans"
+          icon={HandCoins}
+          href="/dashboard/loans?status=active"
         />
         <StatCard
           title="Defaulters"

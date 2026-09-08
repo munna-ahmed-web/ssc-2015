@@ -1,6 +1,6 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 
-import { getAdminProfile, getAuditLogs } from "../api/settings";
+import { getAdminProfile, getAuditLogs, changePassword } from "../api/settings";
 import type { AuditLogFilters } from "../types/types";
 
 export function useFetchAdminProfile() {
@@ -17,4 +17,8 @@ export function useFetchAuditLogs(params?: AuditLogFilters) {
     // Keep the previous page visible while the next one loads (no flash)
     placeholderData: keepPreviousData,
   });
+}
+
+export function useChangePassword() {
+  return useMutation({ mutationFn: changePassword });
 }
