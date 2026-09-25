@@ -5,7 +5,7 @@ import { connectDB } from "@/lib/db";
 import { ClubContributor } from "@/models";
 import { requireAdmin } from "@/lib/auth";
 import { logActivity } from "@/lib/audit";
-import { apiError, apiSuccess, handleRouteError } from "@/lib/api/response";
+import { apiSuccess, apiValidationError, handleRouteError } from "@/lib/api/response";
 
 export async function GET(req: NextRequest) {
   try {
@@ -35,12 +35,7 @@ export async function POST(req: NextRequest) {
 
     const parsed = CreateSchema.safeParse(await req.json());
     if (!parsed.success) {
-      return apiError(
-        "VALIDATION_ERROR",
-        "Validation failed.",
-        422,
-        parsed.error.flatten().fieldErrors,
-      );
+      return apiValidationError(parsed.error);
     }
 
     const contributor = await ClubContributor.create({

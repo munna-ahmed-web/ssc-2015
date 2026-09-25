@@ -26,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { getErrorMessage } from "@/lib/api/errors";
 
 import { useUpdateMember } from "./hook/memberHooks";
 import type { SerializedMember } from "./types/types";
@@ -108,7 +109,7 @@ export default function EditMemberModal({ member, open, onClose }: EditMemberMod
       onClose();
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Network error. Please try again.");
+      setError(getErrorMessage(err, "Network error. Please try again."));
     }
   };
 

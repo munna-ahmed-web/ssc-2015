@@ -8,7 +8,13 @@ import { signAccessToken, signRefreshToken } from "@/lib/jwt";
 import { LoginSchema } from "@/lib/validation/auth.schema";
 import { buildAuthTokens, serializeAuthResponse, setAuthCookies } from "@/lib/auth";
 import { logActivity } from "@/lib/audit";
-import { apiError, apiForbidden, apiSuccess, handleRouteError } from "@/lib/api/response";
+import {
+  apiError,
+  apiForbidden,
+  apiSuccess,
+  apiValidationError,
+  handleRouteError,
+} from "@/lib/api/response";
 
 /**
  * POST /api/auth/login
@@ -60,7 +66,7 @@ export async function POST(req: NextRequest) {
     return res;
   } catch (err) {
     if (err instanceof ZodError) {
-      return apiError("VALIDATION_ERROR", "Validation failed.", 422, err.flatten().fieldErrors);
+      return apiValidationError(err);
     }
     return handleRouteError(err, "[POST /api/auth/login]");
   }

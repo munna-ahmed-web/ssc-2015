@@ -8,6 +8,7 @@ import { AlertTriangle, Loader2, PlayCircle, StopCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { MemberStatus } from "@/models";
+import { getErrorMessage } from "@/lib/api/errors";
 
 import { useUpdateMember } from "./hook/memberHooks";
 
@@ -36,7 +37,7 @@ export default function MemberStatusActions({ memberId, currentStatus }: MemberS
       await updateMember({ id: memberId, data: { status: newStatus } });
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Network error. Please try again.");
+      setError(getErrorMessage(err, "Network error. Please try again."));
     }
   };
 

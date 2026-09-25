@@ -32,6 +32,7 @@ import {
   useFetchClubExpenses,
   useUpdateClubContributor,
 } from "@/features/club/hook/clubHooks";
+import { getErrorMessage } from "@/lib/api/errors";
 
 const TABS = [
   { label: "Collections", value: "collections" },
@@ -232,7 +233,7 @@ export default function ClubPage() {
           <AlertCircle className="size-8 mx-auto text-destructive mb-2" />
           <p className="text-sm font-medium text-destructive">Failed to load club data</p>
           <p className="text-xs text-destructive/80 mt-1">
-            {collError instanceof Error ? collError.message : "An error occurred."}
+            {getErrorMessage(collError, "An error occurred.")}
           </p>
         </div>
       ) : (

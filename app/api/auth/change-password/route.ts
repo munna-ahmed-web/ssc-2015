@@ -5,7 +5,7 @@ import { connectDB } from "@/lib/db";
 import { User } from "@/models";
 import { requireAdmin } from "@/lib/auth";
 import { hashPassword, verifyPassword } from "@/lib/password";
-import { apiError, apiSuccess, handleRouteError } from "@/lib/api/response";
+import { apiError, apiSuccess, apiValidationError, handleRouteError } from "@/lib/api/response";
 
 const ChangePasswordSchema = z
   .object({
@@ -38,12 +38,7 @@ export async function POST(req: NextRequest) {
 
     const parsed = ChangePasswordSchema.safeParse(await req.json());
     if (!parsed.success) {
-      return apiError(
-        "VALIDATION_ERROR",
-        "Validation failed.",
-        422,
-        parsed.error.flatten().fieldErrors,
-      );
+      return apiValidationError(parsed.error);
     }
 
     const user = await User.findById(admin.sub).select("+password");

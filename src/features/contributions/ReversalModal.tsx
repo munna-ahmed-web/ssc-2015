@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatPeriodLabel } from "@/lib/periods";
+import { getErrorMessage } from "@/lib/api/errors";
 
 import { useReverseContribution } from "./hook/contributionHooks";
 
@@ -51,7 +52,7 @@ export default function ReversalModal({
       onClose();
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Network error. Please try again.");
+      setError(getErrorMessage(err, "Network error. Please try again."));
     }
   };
 

@@ -6,7 +6,7 @@ import { connectDB } from "@/lib/db";
 import { ClubContributor } from "@/models";
 import { requireAdmin } from "@/lib/auth";
 import { logActivity } from "@/lib/audit";
-import { apiError, apiSuccess, handleRouteError } from "@/lib/api/response";
+import { apiError, apiSuccess, apiValidationError, handleRouteError } from "@/lib/api/response";
 
 const UpdateSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(150).trim().optional(),
@@ -31,12 +31,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const parsed = UpdateSchema.safeParse(await req.json());
     if (!parsed.success) {
-      return apiError(
-        "VALIDATION_ERROR",
-        "Validation failed.",
-        422,
-        parsed.error.flatten().fieldErrors,
-      );
+      return apiValidationError(parsed.error);
     }
 
     const contributor = await ClubContributor.findById(id);

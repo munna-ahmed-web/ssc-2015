@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import ApplicationStatusBadge from "@/features/applications/ApplicationStatusBadge";
 import { useFetchApplications } from "@/features/applications/hook/applicationHooks";
+import { getErrorMessage } from "@/lib/api/errors";
 
 const STATUS_TABS: { label: string; value: string }[] = [
   { label: "All", value: "all" },
@@ -35,7 +36,7 @@ export default function ApplicationsPage() {
   const handleSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const searchVal = (formData.get("search") as string).trim() ?? "";
+    const searchVal = (formData.get("search")?.toString() ?? "").trim();
 
     const params = new URLSearchParams(searchParams.toString());
     if (searchVal) {
@@ -110,7 +111,7 @@ export default function ApplicationsPage() {
           <AlertCircle className="size-8 mx-auto text-destructive mb-2" />
           <p className="text-sm font-medium text-destructive">Failed to load applications</p>
           <p className="text-xs text-destructive/80 mt-1">
-            {error instanceof Error ? error.message : "An error occurred."}
+            {getErrorMessage(error, "An error occurred.")}
           </p>
         </div>
       ) : (

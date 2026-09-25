@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { getErrorMessage } from "@/lib/api/errors";
 
 import { useUpdateApplicationAction } from "./hook/applicationHooks";
 
@@ -43,7 +44,7 @@ export default function RejectModal({ applicationId, open, onClose }: RejectModa
       onClose();
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Network error. Please try again.");
+      setError(getErrorMessage(err, "Network error. Please try again."));
     }
   };
 
@@ -90,7 +91,7 @@ export default function RejectModal({ applicationId, open, onClose }: RejectModa
           </Button>
           <Button
             variant="destructive"
-            onClick={handleSubmit}
+            onClick={() => void handleSubmit()}
             disabled={submitting || reason.trim().length < 5}
             className="gap-2"
           >

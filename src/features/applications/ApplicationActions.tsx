@@ -8,6 +8,7 @@ import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { ApplicationStatus } from "@/models";
+import { getErrorMessage } from "@/lib/api/errors";
 
 import { useUpdateApplicationAction } from "./hook/applicationHooks";
 import RejectModal from "./RejectModal";
@@ -48,7 +49,7 @@ export default function ApplicationActions({ applicationId, status }: Applicatio
       await updateApplication({ id: applicationId, data: { action: "approve" } });
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Network error. Please try again.");
+      setError(getErrorMessage(err, "Network error. Please try again."));
     }
   };
 

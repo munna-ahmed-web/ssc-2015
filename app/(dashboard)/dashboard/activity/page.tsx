@@ -16,6 +16,7 @@ import {
 } from "@/features/activity/types/types";
 import type { SerializedActivityLog } from "@/features/activity/types/types";
 import type { AuditEntityType } from "@/models/AuditLog";
+import { getErrorMessage } from "@/lib/api/errors";
 
 const LIMIT = 25;
 
@@ -170,7 +171,7 @@ export default function ActivityPage() {
           <AlertCircle className="size-8 mx-auto text-destructive mb-2" />
           <p className="text-sm font-medium text-destructive">Failed to load activity log</p>
           <p className="text-xs text-destructive/80 mt-1">
-            {error instanceof Error ? error.message : "An error occurred."}
+            {getErrorMessage(error, "An error occurred.")}
           </p>
         </div>
       ) : (

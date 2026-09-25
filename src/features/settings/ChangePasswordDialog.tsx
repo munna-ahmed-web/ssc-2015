@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getErrorMessage } from "@/lib/api/errors";
 
 import { useChangePassword } from "./hook/settingsHooks";
 
@@ -53,7 +54,7 @@ export default function ChangePasswordDialog({ open, onClose }: ChangePasswordDi
       await changePassword({ currentPassword, newPassword, confirmPassword });
       setDone(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      setError(getErrorMessage(err, "Something went wrong. Please try again."));
     }
   };
 

@@ -23,6 +23,7 @@ import ProposeLoanDialog from "@/features/loans/ProposeLoanDialog";
 import { useFetchLoans } from "@/features/loans/hook/loanHooks";
 import { isOverdue, outstandingOf, repaidTotal } from "@/features/loans/types/types";
 import type { LoanStatus } from "@/models/Loan";
+import { getErrorMessage } from "@/lib/api/errors";
 
 const STATUS_TABS = [
   { label: "All", value: "" },
@@ -199,7 +200,7 @@ export default function LoansPage() {
           <AlertCircle className="size-8 mx-auto text-destructive mb-2" />
           <p className="text-sm font-medium text-destructive">Failed to load loans</p>
           <p className="text-xs text-destructive/80 mt-1">
-            {error instanceof Error ? error.message : "An error occurred."}
+            {getErrorMessage(error, "An error occurred.")}
           </p>
         </div>
       ) : (

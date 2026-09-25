@@ -12,7 +12,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getApiErrorMessage } from "@/lib/api/response";
+import { getApiErrorMessage } from "@/lib/api/errors";
 import { setClientTokens } from "@/lib/auth/client-tokens";
 
 // ─── Schema (client-only version — no lowercase/trim transforms needed) ────────

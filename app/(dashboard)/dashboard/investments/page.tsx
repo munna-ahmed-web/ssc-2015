@@ -21,6 +21,7 @@ import InvestmentStatusBadge from "@/features/investments/InvestmentStatusBadge"
 import ProposeInvestmentDialog from "@/features/investments/ProposeInvestmentDialog";
 import { useFetchInvestments } from "@/features/investments/hook/investmentHooks";
 import type { InvestmentStatus } from "@/models/Investment";
+import { getErrorMessage } from "@/lib/api/errors";
 
 const STATUS_TABS = [
   { label: "All", value: "" },
@@ -182,7 +183,7 @@ export default function InvestmentsPage() {
           <AlertCircle className="size-8 mx-auto text-destructive mb-2" />
           <p className="text-sm font-medium text-destructive">Failed to load investments</p>
           <p className="text-xs text-destructive/80 mt-1">
-            {error instanceof Error ? error.message : "An error occurred."}
+            {getErrorMessage(error, "An error occurred.")}
           </p>
         </div>
       ) : (

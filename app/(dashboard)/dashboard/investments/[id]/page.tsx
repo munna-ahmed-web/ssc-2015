@@ -18,6 +18,7 @@ import {
   useApproveInvestment,
   useFetchInvestment,
 } from "@/features/investments/hook/investmentHooks";
+import { getErrorMessage } from "@/lib/api/errors";
 
 function LifecycleRow({
   label,
@@ -69,7 +70,7 @@ export default function InvestmentDetailPage() {
       await approve(id);
       router.refresh();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Something went wrong.");
+      setActionError(getErrorMessage(err, "Something went wrong."));
     }
   };
 
@@ -88,7 +89,7 @@ export default function InvestmentDetailPage() {
         <AlertCircle className="size-8 mx-auto text-destructive mb-2" />
         <p className="text-sm font-medium text-destructive">Failed to load investment</p>
         <p className="text-xs text-destructive/80 mt-1">
-          {error instanceof Error ? error.message : "An error occurred."}
+          {getErrorMessage(error, "An error occurred.")}
         </p>
       </div>
     );

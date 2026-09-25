@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRequestLoginLink } from "@/features/member-portal/hook/memberPortalHooks";
+import { getErrorMessage } from "@/lib/api/errors";
 
 export default function MemberLoginPage() {
   const { mutateAsync: requestLink, isPending } = useRequestLoginLink();
@@ -23,7 +24,7 @@ export default function MemberLoginPage() {
       const message = await requestLink(identifier.trim());
       setSentMessage(message);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      setError(getErrorMessage(err, "Something went wrong. Please try again."));
     }
   };
 

@@ -17,6 +17,7 @@ import {
   useFetchLedger,
   useFetchDefaulters,
 } from "@/features/contributions/hook/contributionHooks";
+import { getErrorMessage } from "@/lib/api/errors";
 
 const VIEW_TABS = [
   { label: "Ledger", value: "ledger" },
@@ -186,7 +187,7 @@ export default function ContributionsPage() {
           <AlertCircle className="size-8 mx-auto text-destructive mb-2" />
           <p className="text-sm font-medium text-destructive">Failed to load contributions</p>
           <p className="text-xs text-destructive/80 mt-1">
-            {error instanceof Error ? error.message : "An error occurred."}
+            {getErrorMessage(error, "An error occurred.")}
           </p>
         </div>
       ) : (
