@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { getErrorMessage } from "@/lib/api/errors";
 
 import { useCreateHeroImage } from "./hook/heroImageHooks";
 
@@ -92,7 +93,7 @@ export default function UploadImageModal({ open, onClose }: UploadImageModalProp
       handleClose();
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Network error. Please try again.");
+      setError(getErrorMessage(err, "Network error. Please try again."));
     }
   };
 

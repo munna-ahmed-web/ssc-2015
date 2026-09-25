@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatPeriodLabel } from "@/lib/periods";
+import { getErrorMessage } from "@/lib/api/errors";
 
 import { useAddClubCollection, useFetchClubContributors } from "./hook/clubHooks";
 
@@ -59,7 +60,7 @@ export default function AddClubCollectionDialog({
       });
       handleClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      setError(getErrorMessage(err, "Something went wrong. Please try again."));
     }
   };
 

@@ -6,7 +6,7 @@ import { connectDB } from "@/lib/db";
 import { Contribution, Member } from "@/models";
 import { requireAdmin } from "@/lib/auth";
 import { logActivity } from "@/lib/audit";
-import { apiError, apiSuccess, handleRouteError } from "@/lib/api/response";
+import { apiError, apiSuccess, apiValidationError, handleRouteError } from "@/lib/api/response";
 
 export async function GET(req: NextRequest) {
   try {
@@ -91,12 +91,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const parsed = RecordSchema.safeParse(body);
     if (!parsed.success) {
-      return apiError(
-        "VALIDATION_ERROR",
-        "Validation failed.",
-        422,
-        parsed.error.flatten().fieldErrors,
-      );
+      return apiValidationError(parsed.error);
     }
 
     const { memberId, periodLabel, amount, paidAt, notes } = parsed.data;

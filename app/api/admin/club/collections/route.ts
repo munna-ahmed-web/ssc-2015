@@ -7,7 +7,7 @@ import { ClubCollection, ClubContributor } from "@/models";
 import { requireAdmin } from "@/lib/auth";
 import { logActivity } from "@/lib/audit";
 import { getClubSummary } from "@/lib/clubSummary";
-import { apiError, apiSuccess, handleRouteError } from "@/lib/api/response";
+import { apiError, apiSuccess, apiValidationError, handleRouteError } from "@/lib/api/response";
 
 const PERIOD_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -51,12 +51,7 @@ export async function POST(req: NextRequest) {
 
     const parsed = CreateSchema.safeParse(await req.json());
     if (!parsed.success) {
-      return apiError(
-        "VALIDATION_ERROR",
-        "Validation failed.",
-        422,
-        parsed.error.flatten().fieldErrors,
-      );
+      return apiValidationError(parsed.error);
     }
 
     const { contributorId, amount, periodLabel, paidAt, notes } = parsed.data;

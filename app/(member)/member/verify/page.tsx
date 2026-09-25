@@ -8,6 +8,7 @@ import { Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useVerifyLoginToken } from "@/features/member-portal/hook/memberPortalHooks";
+import { getErrorMessage } from "@/lib/api/errors";
 
 function VerifyContent() {
   const router = useRouter();
@@ -30,7 +31,7 @@ function VerifyContent() {
         router.replace("/member/statistics");
       },
       onError: (err) => {
-        setError(err instanceof Error ? err.message : "This login link is invalid or has expired.");
+        setError(getErrorMessage(err, "This login link is invalid or has expired."));
       },
     });
   }, [token, verify, router]);

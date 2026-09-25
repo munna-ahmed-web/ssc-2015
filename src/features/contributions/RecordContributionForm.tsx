@@ -35,6 +35,7 @@ import { getRecentPeriods } from "@/lib/periods";
 import { getPeriodLabel } from "@/types";
 import { getMembers } from "@/features/members/api/members";
 import { useFetchMemberById } from "@/features/members/hook/memberHooks";
+import { getErrorMessage } from "@/lib/api/errors";
 
 import { useRecordContribution } from "./hook/contributionHooks";
 
@@ -171,7 +172,7 @@ export default function RecordContributionForm() {
       router.push("/dashboard/contributions");
       router.refresh();
     } catch (err) {
-      setServerError(err instanceof Error ? err.message : "Network error. Please try again.");
+      setServerError(getErrorMessage(err, "Network error. Please try again."));
     }
   };
 

@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getErrorMessage } from "@/lib/api/errors";
 
 import { useCloseInvestment } from "./hook/investmentHooks";
 
@@ -72,7 +73,7 @@ export default function CloseInvestmentDialog({
       });
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      setError(getErrorMessage(err, "Something went wrong. Please try again."));
     }
   };
 

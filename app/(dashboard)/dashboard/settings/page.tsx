@@ -20,6 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useFetchAdminProfile, useFetchAuditLogs } from "@/features/settings/hook/settingsHooks";
 import ChangePasswordDialog from "@/features/settings/ChangePasswordDialog";
+import { getErrorMessage } from "@/lib/api/errors";
 
 const LOGS_PER_PAGE = 10;
 
@@ -87,7 +88,7 @@ export default function SettingsPage() {
         <AlertCircle className="size-8 mx-auto text-destructive mb-2" />
         <p className="text-sm font-medium text-destructive">Failed to load settings data</p>
         <p className="text-xs text-destructive/80 mt-1">
-          {adminError instanceof Error ? adminError.message : "An error occurred."}
+          {getErrorMessage(adminError, "An error occurred.")}
         </p>
       </div>
     );
@@ -218,7 +219,7 @@ export default function SettingsPage() {
                 <AlertCircle className="size-6 mx-auto text-destructive mb-2" />
                 <p className="text-sm font-medium text-destructive">Failed to load audit logs</p>
                 <p className="text-xs text-destructive/80 mt-1">
-                  {logsError instanceof Error ? logsError.message : "An error occurred."}
+                  {getErrorMessage(logsError, "An error occurred.")}
                 </p>
               </div>
             ) : logs.length === 0 ? (

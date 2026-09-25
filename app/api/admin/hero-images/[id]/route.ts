@@ -7,7 +7,7 @@ import { HeroImage } from "@/models";
 import { requireAdmin } from "@/lib/auth";
 import { logActivity } from "@/lib/audit";
 import { deleteFromCloudinary } from "@/lib/cloudinary";
-import { apiError, apiSuccess, handleRouteError } from "@/lib/api/response";
+import { apiError, apiSuccess, apiValidationError, handleRouteError } from "@/lib/api/response";
 
 const UpdateSchema = z.object({
   altText: z.string().min(1).max(200).trim().optional(),
@@ -29,12 +29,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const body = await req.json();
     const parsed = UpdateSchema.safeParse(body);
     if (!parsed.success) {
-      return apiError(
-        "VALIDATION_ERROR",
-        "Validation failed.",
-        422,
-        parsed.error.flatten().fieldErrors,
-      );
+      return apiValidationError(parsed.error);
     }
 
     const image = await HeroImage.findById(id);

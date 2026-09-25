@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { getErrorMessage } from "@/lib/api/errors";
 
 import { useCreateGalleryImage } from "./hook/galleryImageHooks";
 
@@ -92,7 +93,7 @@ export default function UploadGalleryImageModal({ open, onClose }: UploadGallery
       handleClose();
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Network error. Please try again.");
+      setError(getErrorMessage(err, "Network error. Please try again."));
     }
   };
 
@@ -164,7 +165,8 @@ export default function UploadGalleryImageModal({ open, onClose }: UploadGallery
           {/* Caption */}
           <div className="space-y-1.5">
             <Label htmlFor="gallery-caption">
-              Caption <span className="text-xs text-muted-foreground">(optional hover description)</span>
+              Caption{" "}
+              <span className="text-xs text-muted-foreground">(optional hover description)</span>
             </Label>
             <Textarea
               id="gallery-caption"

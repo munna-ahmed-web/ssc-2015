@@ -6,7 +6,7 @@ import { connectDB } from "@/lib/db";
 import { Member } from "@/models";
 import { requireAdmin } from "@/lib/auth";
 import { buildFieldDiff, logActivity } from "@/lib/audit";
-import { apiError, apiSuccess, handleRouteError } from "@/lib/api/response";
+import { apiError, apiSuccess, apiValidationError, handleRouteError } from "@/lib/api/response";
 
 const UpdateMemberSchema = z.object({
   fullName: z.string().min(2, "Name too short").trim().optional(),
@@ -68,12 +68,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const body = await req.json();
     const parsed = UpdateMemberSchema.safeParse(body);
     if (!parsed.success) {
-      return apiError(
-        "VALIDATION_ERROR",
-        "Validation failed.",
-        422,
-        parsed.error.flatten().fieldErrors,
-      );
+      return apiValidationError(parsed.error);
     }
 
     const member = await Member.findById(id);

@@ -6,7 +6,7 @@
 import { cookies, headers } from "next/headers";
 
 import { verifyAccessToken, type TokenPayload } from "@/lib/jwt";
-import { apiUnauthorized } from "@/lib/api/response";
+import { apiForbidden, apiUnauthorized } from "@/lib/api/response";
 
 import { parseBearerToken } from "./auth/constants";
 
@@ -50,13 +50,20 @@ export async function getSessionUser(): Promise<TokenPayload | null> {
 }
 
 /**
- * Like getSessionUser() but throws a 401 Response if not authenticated.
+ * Like getSessionUser() but throws a Response if not authenticated.
  * Use inside Route Handlers that require auth.
+ *
+ * A signed-in non-admin gets 403, not 401 — a 401 would send the client into a
+ * token refresh and a /login redirect that cannot fix a role problem, and the
+ * admin would never see why the action was refused.
  */
 export async function requireAdmin(): Promise<TokenPayload> {
   const user = await getSessionUser();
-  if (!user || user.role !== "admin") {
-    throw apiUnauthorized();
+  if (!user) {
+    throw apiUnauthorized("Your session has expired. Please sign in again.");
+  }
+  if (user.role !== "admin") {
+    throw apiForbidden("This action requires an administrator account.");
   }
   return user;
 }
@@ -73,13 +80,15 @@ export async function requireMember(): Promise<TokenPayload> {
     const bearer = await resolveAccessToken();
     const cookieStore = await cookies();
     const token = bearer ?? cookieStore.get(COOKIE_MEMBER)?.value;
-    if (!token) throw apiUnauthorized();
+    if (!token) throw apiUnauthorized("Please sign in to view your member portal.");
 
     const payload = verifyAccessToken(token);
-    if (payload.role !== "member") throw apiUnauthorized();
+    if (payload.role !== "member") {
+      throw apiForbidden("This area is for member accounts only.");
+    }
     return payload;
   } catch (err) {
     if (err instanceof Response) throw err;
-    throw apiUnauthorized();
+    throw apiUnauthorized("Your member session has expired. Please sign in again.");
   }
 }

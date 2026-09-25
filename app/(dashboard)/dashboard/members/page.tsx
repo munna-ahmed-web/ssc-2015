@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import MemberStatusBadge from "@/features/members/MemberStatusBadge";
 import { useFetchMembers } from "@/features/members/hook/memberHooks";
+import { getErrorMessage } from "@/lib/api/errors";
 
 const STATUS_TABS = [
   { label: "All", value: "all" },
@@ -112,7 +113,7 @@ export default function MembersPage() {
           <AlertCircle className="size-8 mx-auto text-destructive mb-2" />
           <p className="text-sm font-medium text-destructive">Failed to load members</p>
           <p className="text-xs text-destructive/80 mt-1">
-            {error instanceof Error ? error.message : "An error occurred."}
+            {getErrorMessage(error, "An error occurred.")}
           </p>
         </div>
       ) : (

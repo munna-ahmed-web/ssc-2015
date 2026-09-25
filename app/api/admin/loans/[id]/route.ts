@@ -7,7 +7,13 @@ import { Loan } from "@/models";
 import { requireAdmin } from "@/lib/auth";
 import { logActivity } from "@/lib/audit";
 import { getFundBalance } from "@/lib/fundBalance";
-import { apiError, apiForbidden, apiSuccess, handleRouteError } from "@/lib/api/response";
+import {
+  apiError,
+  apiForbidden,
+  apiSuccess,
+  apiValidationError,
+  handleRouteError,
+} from "@/lib/api/response";
 
 const ApproveSchema = z.object({ action: z.literal("approve") });
 const RejectSchema = z.object({
@@ -68,12 +74,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const parsed = ActionSchema.safeParse(await req.json());
     if (!parsed.success) {
-      return apiError(
-        "VALIDATION_ERROR",
-        "Validation failed.",
-        422,
-        parsed.error.flatten().fieldErrors,
-      );
+      return apiValidationError(parsed.error);
     }
 
     const loan = await Loan.findById(id);

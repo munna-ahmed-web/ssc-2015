@@ -6,7 +6,7 @@ import { z } from "zod";
 import { connectDB } from "@/lib/db";
 import { Member, MemberLoginToken } from "@/models";
 import { sendMemberMagicLink } from "@/lib/email";
-import { apiError, apiSuccess, handleRouteError } from "@/lib/api/response";
+import { apiError, apiSuccess, apiValidationError, handleRouteError } from "@/lib/api/response";
 
 const RequestSchema = z.object({
   identifier: z.string().min(3, "Enter your phone number or email").max(200).trim(),
@@ -31,12 +31,7 @@ export async function POST(req: NextRequest) {
 
     const parsed = RequestSchema.safeParse(await req.json());
     if (!parsed.success) {
-      return apiError(
-        "VALIDATION_ERROR",
-        "Validation failed.",
-        422,
-        parsed.error.flatten().fieldErrors,
-      );
+      return apiValidationError(parsed.error);
     }
 
     const identifier = parsed.data.identifier;

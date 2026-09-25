@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { getErrorMessage } from "@/lib/api/errors";
 
 /**
  * Shared reason-capture dialog for the two destructive loan actions
@@ -56,7 +57,7 @@ export default function LoanReasonDialog({
       setReason("");
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      setError(getErrorMessage(err, "Something went wrong. Please try again."));
     } finally {
       setPending(false);
     }

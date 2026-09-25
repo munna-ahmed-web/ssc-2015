@@ -5,6 +5,8 @@ export type AppErrorCode =
   | "NOT_FOUND"
   | "VALIDATION_ERROR"
   | "DUPLICATE_ENTRY"
+  | "UNSUPPORTED_MEDIA_TYPE"
+  | "PAYLOAD_TOO_LARGE"
   | "CONFLICT"
   | "RATE_LIMITED"
   | "SERVER_ERROR"

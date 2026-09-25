@@ -8,10 +8,11 @@ import {
   useFetchMemberById,
   useFetchMemberContributions,
 } from "@/features/members/hook/memberHooks";
+import { getErrorMessage } from "@/lib/api/errors";
 
 export default function MemberDetailPage() {
   const params = useParams();
-  const id = params?.id as string;
+  const id = params.id as string;
 
   const {
     data: member,
@@ -46,7 +47,7 @@ export default function MemberDetailPage() {
         <AlertCircle className="size-8 mx-auto text-destructive mb-2" />
         <p className="text-sm font-medium text-destructive">Failed to load member record</p>
         <p className="text-xs text-destructive/80 mt-1">
-          {error instanceof Error ? error.message : "Record not found or network error occurred."}
+          {getErrorMessage(error, "Record not found or network error occurred.")}
         </p>
       </div>
     );

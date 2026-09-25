@@ -6,7 +6,7 @@ import { connectDB } from "@/lib/db";
 import { Contribution } from "@/models";
 import { requireAdmin } from "@/lib/auth";
 import { logActivity } from "@/lib/audit";
-import { apiError, apiSuccess, handleRouteError } from "@/lib/api/response";
+import { apiError, apiSuccess, apiValidationError, handleRouteError } from "@/lib/api/response";
 
 const ReversalSchema = z.object({
   notes: z.string().min(5, "Reversal reason must be at least 5 characters").max(500).trim(),
@@ -25,12 +25,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const body = await req.json();
     const parsed = ReversalSchema.safeParse(body);
     if (!parsed.success) {
-      return apiError(
-        "VALIDATION_ERROR",
-        "Validation failed.",
-        422,
-        parsed.error.flatten().fieldErrors,
-      );
+      return apiValidationError(parsed.error);
     }
 
     const original = await Contribution.findById(id);

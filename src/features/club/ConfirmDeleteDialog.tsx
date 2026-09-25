@@ -11,6 +11,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { getErrorMessage } from "@/lib/api/errors";
 
 interface ConfirmDeleteDialogProps {
   open: boolean;
@@ -43,7 +44,7 @@ export default function ConfirmDeleteDialog({
       await onConfirm();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      setError(getErrorMessage(err, "Something went wrong. Please try again."));
     } finally {
       setPending(false);
     }

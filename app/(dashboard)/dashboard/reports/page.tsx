@@ -23,6 +23,7 @@ import { Separator } from "@/components/ui/separator";
 import { getPeriodLabel } from "@/types";
 import { getRecentPeriods, formatPeriodLabel } from "@/lib/periods";
 import { useFetchReport } from "@/features/reports/hook/reportHooks";
+import { getErrorMessage } from "@/lib/api/errors";
 
 function StatCard({
   icon: Icon,
@@ -166,7 +167,7 @@ export default function ReportsPage() {
           <AlertCircle className="size-8 mx-auto text-destructive mb-2" />
           <p className="text-sm font-medium text-destructive">Failed to load report data</p>
           <p className="text-xs text-destructive/80 mt-1">
-            {error instanceof Error ? error.message : "An error occurred."}
+            {getErrorMessage(error, "An error occurred.")}
           </p>
         </div>
       ) : (

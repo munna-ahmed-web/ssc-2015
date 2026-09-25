@@ -12,6 +12,7 @@ import { Eye, EyeOff, Trash2, GripVertical, Loader2, Edit2, Check, X } from "luc
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { getErrorMessage } from "@/lib/api/errors";
 
 import type { SerializedGalleryImage } from "./types/types";
 import { useUpdateGalleryImage, useDeleteGalleryImage } from "./hook/galleryImageHooks";
@@ -41,7 +42,7 @@ export default function GalleryImageCard({ image }: GalleryImageCardProps) {
       await updateGalleryImage({ id, data: { isActive: !image.isActive } });
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Network error.");
+      setError(getErrorMessage(err, "Network error."));
     } finally {
       setLoading(null);
     }
@@ -67,7 +68,7 @@ export default function GalleryImageCard({ image }: GalleryImageCardProps) {
       setEditingOrder(false);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Network error.");
+      setError(getErrorMessage(err, "Network error."));
     } finally {
       setLoading(null);
     }
@@ -83,7 +84,7 @@ export default function GalleryImageCard({ image }: GalleryImageCardProps) {
       await deleteGalleryImage(id);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Network error.");
+      setError(getErrorMessage(err, "Network error."));
     } finally {
       setLoading(null);
     }

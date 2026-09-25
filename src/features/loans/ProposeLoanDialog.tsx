@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { getMembers } from "@/features/members/api/members";
+import { getErrorMessage } from "@/lib/api/errors";
 
 import { useProposeLoan } from "./hook/loanHooks";
 
@@ -100,7 +101,7 @@ export default function ProposeLoanDialog({
       });
       handleClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      setError(getErrorMessage(err, "Something went wrong. Please try again."));
     }
   };
 

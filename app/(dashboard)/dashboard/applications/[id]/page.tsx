@@ -24,6 +24,7 @@ import { adminName } from "@/lib/utils";
 import ApplicationStatusBadge from "@/features/applications/ApplicationStatusBadge";
 import ApplicationActions from "@/features/applications/ApplicationActions";
 import { useFetchApplicationById } from "@/features/applications/hook/applicationHooks";
+import { getErrorMessage } from "@/lib/api/errors";
 
 function InfoRow({
   icon: Icon,
@@ -68,7 +69,7 @@ export default function ApplicationDetailPage() {
         <AlertCircle className="size-8 mx-auto text-destructive mb-2" />
         <p className="text-sm font-medium text-destructive">Failed to load application</p>
         <p className="text-xs text-destructive/80 mt-1">
-          {error instanceof Error ? error.message : "Application not found."}
+          {getErrorMessage(error, "Application not found.")}
         </p>
       </div>
     );
